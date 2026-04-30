@@ -33,6 +33,8 @@ pub enum RedoubtError {
     BountyNotYetExpired,
     #[msg("Submission grace period has not elapsed")]
     SubmissionGraceNotElapsed,
+    #[msg("Bounty is already in a terminal status")]
+    BountyAlreadyResolved,
 
     #[msg("Caller is not the bounty creator")]
     NotCreator,

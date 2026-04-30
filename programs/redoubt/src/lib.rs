@@ -72,6 +72,13 @@ pub mod redoubt {
         instructions::expire_submitted::handler(ctx)
     }
 
+    pub fn resolve_dispute(
+        ctx: Context<ResolveDispute>,
+        decision: ResolveDecision,
+    ) -> Result<()> {
+        instructions::resolve_dispute::handler(ctx, decision)
+    }
+
     pub fn initialize_config(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
         instructions::initialize_config::handler(ctx, guardian)
     }

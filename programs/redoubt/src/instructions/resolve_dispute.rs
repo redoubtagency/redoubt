@@ -1,0 +1,105 @@
+use anchor_lang::prelude::*;
+
+use crate::errors::RedoubtError;
+use crate::state::{Bounty, BountyEscrow, BountyStatus, Config};
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ResolveDecision {
+    AwardClaimer,
+    RefundCreator,
+}
+
+#[derive(Accounts)]
+pub struct ResolveDispute<'info> {
+    #[account(
+        mut,
+        seeds = [Bounty::SEED, bounty.creator.as_ref(), &bounty.bounty_id.to_le_bytes()],
+        bump = bounty.bump,
+        has_one = creator @ RedoubtError::NotCreator,
+    )]
+    pub bounty: Account<'info, Bounty>,
+
+    #[account(
+        mut,
+        close = creator,
+        seeds = [BountyEscrow::SEED, bounty.key().as_ref()],
+        bump = escrow.bump,
+        has_one = bounty,
+    )]
+    pub escrow: Account<'info, BountyEscrow>,
+
+    /// CHECK: receives lamports via Anchor's `close = creator`; pubkey verified by has_one.
+    #[account(mut)]
+    pub creator: AccountInfo<'info>,
+
+    /// CHECK: For AwardClaimer, address is verified against bounty.claimer in handler.
+    /// For RefundCreator, this account is unused but still passed to keep the account
+    /// layout uniform across both decisions.
+    #[account(mut)]
+    pub claimer: AccountInfo<'info>,
+
+    #[account(
+        seeds = [Config::SEED],
+        bump = config.bump,
+        has_one = admin @ RedoubtError::NotAdmin,
+    )]
+    pub config: Account<'info, Config>,
+
+    pub admin: Signer<'info>,
+}
+
+pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Result<()> {
+    let bounty = &mut ctx.accounts.bounty;
+
+    require!(
+        matches!(
+            bounty.status,
+            BountyStatus::Open
+                | BountyStatus::Claimed
+                | BountyStatus::Submitted
+                | BountyStatus::Disputed
+        ),
+        RedoubtError::BountyAlreadyResolved
+    );
+
+    match decision {
+        ResolveDecision::AwardClaimer => {
+            require!(
+                matches!(
+                    bounty.status,
+                    BountyStatus::Claimed | BountyStatus::Submitted | BountyStatus::Disputed
+                ),
+                RedoubtError::BountyNotClaimed
+            );
+            require_keys_eq!(
+                ctx.accounts.claimer.key(),
+                bounty.claimer,
+                RedoubtError::NotClaimer
+            );
+
+            let escrow_info = ctx.accounts.escrow.to_account_info();
+            let claimer_info = ctx.accounts.claimer.to_account_info();
+            let reward = bounty.reward_amount;
+
+            let escrow_lamports = escrow_info.lamports();
+            require!(escrow_lamports >= reward, RedoubtError::EscrowUnderfunded);
+
+            // Reward to claimer; rent-exempt remainder routes to creator via close.
+            **escrow_info.try_borrow_mut_lamports()? = escrow_lamports
+                .checked_sub(reward)
+                .ok_or(RedoubtError::EscrowUnderfunded)?;
+            **claimer_info.try_borrow_mut_lamports()? = claimer_info
+                .lamports()
+                .checked_add(reward)
+                .ok_or(RedoubtError::EscrowUnderfunded)?;
+
+            bounty.status = BountyStatus::Approved;
+        }
+        ResolveDecision::RefundCreator => {
+            // close = creator routes everything (reward + rent) to creator.
+            bounty.status = BountyStatus::Cancelled;
+        }
+    }
+
+    Ok(())
+}
