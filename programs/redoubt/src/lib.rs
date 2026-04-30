@@ -64,6 +64,14 @@ pub mod redoubt {
         instructions::cancel_bounty::handler(ctx)
     }
 
+    pub fn expire_bounty(ctx: Context<ExpireBounty>) -> Result<()> {
+        instructions::expire_bounty::handler(ctx)
+    }
+
+    pub fn expire_submitted(ctx: Context<ExpireSubmitted>) -> Result<()> {
+        instructions::expire_submitted::handler(ctx)
+    }
+
     pub fn initialize_config(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
         instructions::initialize_config::handler(ctx, guardian)
     }

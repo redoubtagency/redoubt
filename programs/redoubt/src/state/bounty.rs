@@ -37,6 +37,11 @@ impl Bounty {
     pub const MAX_NAMESPACE_LEN: usize = 64;
     pub const MAX_SUBMISSION_URI_LEN: usize = 200;
 
+    // Window after deadline during which only the creator can resolve a Submitted
+    // bounty. After this window passes, anyone can trigger expire_submitted and
+    // the escrow auto-pays the claimer — protects workers from creator silence.
+    pub const SUBMISSION_GRACE_SECONDS: i64 = 7 * 24 * 3600;
+
     pub const SPACE: usize = 8
         + 32
         + 8

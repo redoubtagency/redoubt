@@ -27,6 +27,12 @@ pub enum RedoubtError {
     BountyNotClaimed,
     #[msg("Bounty is not in Submitted state")]
     BountyNotSubmitted,
+    #[msg("Bounty status does not allow this expiry path")]
+    BountyNotExpirable,
+    #[msg("Bounty deadline has not been reached yet")]
+    BountyNotYetExpired,
+    #[msg("Submission grace period has not elapsed")]
+    SubmissionGraceNotElapsed,
 
     #[msg("Caller is not the bounty creator")]
     NotCreator,
