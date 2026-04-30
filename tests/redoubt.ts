@@ -172,11 +172,14 @@ describe("redoubt: bounty happy path", () => {
     let threw = false;
     try {
       await program.methods
-        .claimBounty()
+        .claimBounty(new BN(0))
         .accounts({
           bounty: restrictedBounty,
           claimerAgent: claimerAgentPda,
           claimer: claimer.publicKey,
+          config: null,
+          position: null,
+          instructionsSysvar: null,
         })
         .signers([claimer])
         .rpc();
@@ -189,11 +192,14 @@ describe("redoubt: bounty happy path", () => {
 
   it("claimer claims the open bounty", async () => {
     await program.methods
-      .claimBounty()
+      .claimBounty(new BN(0))
       .accounts({
         bounty: bountyPda,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
+        config: null,
+        position: null,
+        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();

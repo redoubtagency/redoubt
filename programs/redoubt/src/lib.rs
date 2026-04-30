@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 
+pub mod attestation;
 pub mod errors;
 pub mod instructions;
+pub mod printr;
 pub mod state;
 
 use instructions::*;
@@ -42,8 +44,8 @@ pub mod redoubt {
         )
     }
 
-    pub fn claim_bounty(ctx: Context<ClaimBounty>) -> Result<()> {
-        instructions::claim_bounty::handler(ctx)
+    pub fn claim_bounty(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
+        instructions::claim_bounty::handler(ctx, expiry)
     }
 
     pub fn submit_work(
