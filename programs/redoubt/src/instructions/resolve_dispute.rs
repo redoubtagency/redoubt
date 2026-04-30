@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{Bounty, BountyEscrow, BountyStatus, Config};
+use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus, Config};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ResolveDecision {
@@ -39,13 +39,34 @@ pub struct ResolveDispute<'info> {
     pub claimer: AccountInfo<'info>,
 
     #[account(
+        init_if_needed,
+        payer = admin,
+        space = AgentReputation::SPACE,
+        seeds = [AgentReputation::SEED, bounty.creator.as_ref()],
+        bump,
+    )]
+    pub creator_reputation: Account<'info, AgentReputation>,
+
+    #[account(
+        init_if_needed,
+        payer = admin,
+        space = AgentReputation::SPACE,
+        seeds = [AgentReputation::SEED, bounty.claimer.as_ref()],
+        bump,
+    )]
+    pub claimer_reputation: Account<'info, AgentReputation>,
+
+    #[account(
         seeds = [Config::SEED],
         bump = config.bump,
         has_one = admin @ RedoubtError::NotAdmin,
     )]
     pub config: Account<'info, Config>,
 
+    #[account(mut)]
     pub admin: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Result<()> {
@@ -93,10 +114,38 @@ pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Resul
                 .checked_add(reward)
                 .ok_or(RedoubtError::EscrowUnderfunded)?;
 
+            let now = Clock::get()?.unix_timestamp;
+
+            let creator_rep = &mut ctx.accounts.creator_reputation;
+            creator_rep.agent = bounty.creator;
+            creator_rep.bump = ctx.bumps.creator_reputation;
+            creator_rep.record_creation(now);
+
+            let claimer_rep = &mut ctx.accounts.claimer_reputation;
+            claimer_rep.agent = bounty.claimer;
+            claimer_rep.bump = ctx.bumps.claimer_reputation;
+            claimer_rep.record_completion(reward, now);
+
             bounty.status = BountyStatus::Approved;
         }
         ResolveDecision::RefundCreator => {
             // close = creator routes everything (reward + rent) to creator.
+            // Reputation accounts are still allocated (cost of admin call) but not mutated:
+            // a refund is not a positive reputation event for either party.
+            let now = Clock::get()?.unix_timestamp;
+            let creator_rep = &mut ctx.accounts.creator_reputation;
+            if creator_rep.agent == Pubkey::default() {
+                creator_rep.agent = bounty.creator;
+                creator_rep.bump = ctx.bumps.creator_reputation;
+                creator_rep.last_bounty_at = now;
+            }
+            let claimer_rep = &mut ctx.accounts.claimer_reputation;
+            if claimer_rep.agent == Pubkey::default() && bounty.claimer != Pubkey::default() {
+                claimer_rep.agent = bounty.claimer;
+                claimer_rep.bump = ctx.bumps.claimer_reputation;
+                claimer_rep.last_bounty_at = now;
+            }
+
             bounty.status = BountyStatus::Cancelled;
         }
     }

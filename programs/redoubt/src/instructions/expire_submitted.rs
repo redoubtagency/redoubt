@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{Bounty, BountyEscrow, BountyStatus};
+use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus};
 
 #[derive(Accounts)]
 pub struct ExpireSubmitted<'info> {
@@ -34,7 +34,28 @@ pub struct ExpireSubmitted<'info> {
     )]
     pub claimer: AccountInfo<'info>,
 
+    #[account(
+        init_if_needed,
+        payer = caller,
+        space = AgentReputation::SPACE,
+        seeds = [AgentReputation::SEED, bounty.creator.as_ref()],
+        bump,
+    )]
+    pub creator_reputation: Account<'info, AgentReputation>,
+
+    #[account(
+        init_if_needed,
+        payer = caller,
+        space = AgentReputation::SPACE,
+        seeds = [AgentReputation::SEED, bounty.claimer.as_ref()],
+        bump,
+    )]
+    pub claimer_reputation: Account<'info, AgentReputation>,
+
+    #[account(mut)]
     pub caller: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<ExpireSubmitted>) -> Result<()> {
@@ -67,6 +88,16 @@ pub fn handler(ctx: Context<ExpireSubmitted>) -> Result<()> {
         .lamports()
         .checked_add(reward)
         .ok_or(RedoubtError::EscrowUnderfunded)?;
+
+    let creator_rep = &mut ctx.accounts.creator_reputation;
+    creator_rep.agent = bounty.creator;
+    creator_rep.bump = ctx.bumps.creator_reputation;
+    creator_rep.record_creation(now);
+
+    let claimer_rep = &mut ctx.accounts.claimer_reputation;
+    claimer_rep.agent = bounty.claimer;
+    claimer_rep.bump = ctx.bumps.claimer_reputation;
+    claimer_rep.record_completion(reward, now);
 
     bounty.status = BountyStatus::Approved;
 

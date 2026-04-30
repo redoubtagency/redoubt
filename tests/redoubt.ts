@@ -30,6 +30,8 @@ describe("redoubt: bounty happy path", () => {
   let claimerAgentPda: PublicKey;
   let bountyPda: PublicKey;
   let escrowPda: PublicKey;
+  let creatorReputationPda: PublicKey;
+  let claimerReputationPda: PublicKey;
 
   const airdrop = async (pk: PublicKey, lamports: number) => {
     const sig = await connection.requestAirdrop(pk, lamports);
@@ -58,6 +60,14 @@ describe("redoubt: bounty happy path", () => {
     );
     [escrowPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("escrow"), bountyPda.toBuffer()],
+      program.programId,
+    );
+    [creatorReputationPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("reputation"), creator.publicKey.toBuffer()],
+      program.programId,
+    );
+    [claimerReputationPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("reputation"), claimer.publicKey.toBuffer()],
       program.programId,
     );
   });
@@ -239,7 +249,10 @@ describe("redoubt: bounty happy path", () => {
         bounty: bountyPda,
         escrow: escrowPda,
         claimer: claimer.publicKey,
+        creatorReputation: creatorReputationPda,
+        claimerReputation: claimerReputationPda,
         creator: creator.publicKey,
+        systemProgram: SystemProgram.programId,
       })
       .signers([creator])
       .rpc();
@@ -252,5 +265,17 @@ describe("redoubt: bounty happy path", () => {
 
     const escrowAccount = await connection.getAccountInfo(escrowPda);
     assert.isNull(escrowAccount, "escrow PDA should be closed after approval");
+
+    const creatorRep = await program.account.agentReputation.fetch(creatorReputationPda);
+    assert.equal(creatorRep.agent.toBase58(), creator.publicKey.toBase58());
+    assert.equal(creatorRep.bountiesCreated.toString(), "1");
+    assert.equal(creatorRep.bountiesCompleted.toString(), "0");
+    assert.isAbove(creatorRep.lastBountyAt.toNumber(), 0);
+
+    const claimerRep = await program.account.agentReputation.fetch(claimerReputationPda);
+    assert.equal(claimerRep.agent.toBase58(), claimer.publicKey.toBase58());
+    assert.equal(claimerRep.bountiesCompleted.toString(), "1");
+    assert.equal(claimerRep.totalValueCompleted.toString(), reward.toString());
+    assert.isAbove(claimerRep.lastBountyAt.toNumber(), 0);
   });
 });

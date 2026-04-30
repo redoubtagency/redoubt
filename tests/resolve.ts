@@ -31,6 +31,14 @@ describe("redoubt: resolve dispute", () => {
   let claimerAgentPda: PublicKey;
   let configPda: PublicKey;
 
+  const reputationPda = (wallet: PublicKey) => {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("reputation"), wallet.toBuffer()],
+      program.programId,
+    );
+    return pda;
+  };
+
   const airdrop = async (pk: PublicKey, lamports: number) => {
     const sig = await connection.requestAirdrop(pk, lamports);
     await connection.confirmTransaction(sig, "confirmed");
@@ -159,8 +167,11 @@ describe("redoubt: resolve dispute", () => {
         escrow,
         creator: creator.publicKey,
         claimer: claimer.publicKey,
+        creatorReputation: reputationPda(creator.publicKey),
+        claimerReputation: reputationPda(claimer.publicKey),
         config: configPda,
         admin: admin.publicKey,
+        systemProgram: SystemProgram.programId,
       })
       .rpc();
 
@@ -176,6 +187,16 @@ describe("redoubt: resolve dispute", () => {
       reward.toNumber(),
       "claimer should receive the full reward",
     );
+
+    const creatorRep = await program.account.agentReputation.fetch(
+      reputationPda(creator.publicKey),
+    );
+    assert.equal(creatorRep.bountiesCreated.toString(), "1");
+    const claimerRep = await program.account.agentReputation.fetch(
+      reputationPda(claimer.publicKey),
+    );
+    assert.equal(claimerRep.bountiesCompleted.toString(), "1");
+    assert.equal(claimerRep.totalValueCompleted.toString(), reward.toString());
   });
 
   it("admin force-refunds a Submitted bounty to the creator", async () => {
@@ -193,8 +214,11 @@ describe("redoubt: resolve dispute", () => {
         escrow,
         creator: creator.publicKey,
         claimer: claimer.publicKey,
+        creatorReputation: reputationPda(creator.publicKey),
+        claimerReputation: reputationPda(claimer.publicKey),
         config: configPda,
         admin: admin.publicKey,
+        systemProgram: SystemProgram.programId,
       })
       .rpc();
 
@@ -220,6 +244,8 @@ describe("redoubt: resolve dispute", () => {
     const escrowBefore = await connection.getBalance(escrow);
     const creatorBefore = await connection.getBalance(creator.publicKey);
 
+    // Bounty is Open — bounty.claimer is Pubkey::default(), so the claimer_reputation
+    // PDA the program expects is derived from the zero key, not from claimer.publicKey.
     await program.methods
       .resolveDispute({ refundCreator: {} })
       .accounts({
@@ -227,8 +253,11 @@ describe("redoubt: resolve dispute", () => {
         escrow,
         creator: creator.publicKey,
         claimer: claimer.publicKey,
+        creatorReputation: reputationPda(creator.publicKey),
+        claimerReputation: reputationPda(PublicKey.default),
         config: configPda,
         admin: admin.publicKey,
+        systemProgram: SystemProgram.programId,
       })
       .rpc();
 
@@ -246,6 +275,7 @@ describe("redoubt: resolve dispute", () => {
 
     let threw = false;
     try {
+      // Bounty is Open: bounty.claimer is Pubkey::default(), seeds derive from it.
       await program.methods
         .resolveDispute({ awardClaimer: {} })
         .accounts({
@@ -253,8 +283,11 @@ describe("redoubt: resolve dispute", () => {
           escrow,
           creator: creator.publicKey,
           claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(PublicKey.default),
           config: configPda,
           admin: admin.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .rpc();
     } catch (err: any) {
@@ -271,6 +304,7 @@ describe("redoubt: resolve dispute", () => {
 
     let threw = false;
     try {
+      // Bounty is Open: claimer_reputation PDA is for Pubkey::default().
       await program.methods
         .resolveDispute({ refundCreator: {} })
         .accounts({
@@ -278,8 +312,11 @@ describe("redoubt: resolve dispute", () => {
           escrow,
           creator: creator.publicKey,
           claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(PublicKey.default),
           config: configPda,
           admin: stranger.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .signers([stranger])
         .rpc();
@@ -315,8 +352,11 @@ describe("redoubt: resolve dispute", () => {
           escrow,
           creator: creator.publicKey,
           claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(claimer.publicKey),
           config: configPda,
           admin: admin.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .rpc();
     } catch (err: any) {

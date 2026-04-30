@@ -32,6 +32,14 @@ describe("redoubt: bounty expiry", () => {
   let creatorAgentPda: PublicKey;
   let claimerAgentPda: PublicKey;
 
+  const reputationPda = (wallet: PublicKey) => {
+    const [pda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("reputation"), wallet.toBuffer()],
+      program.programId,
+    );
+    return pda;
+  };
+
   const airdrop = async (pk: PublicKey, lamports: number) => {
     const sig = await connection.requestAirdrop(pk, lamports);
     await connection.confirmTransaction(sig, "confirmed");
@@ -305,7 +313,10 @@ describe("redoubt: bounty expiry", () => {
           escrow,
           creator: creator.publicKey,
           claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(claimer.publicKey),
           caller: stranger.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .signers([stranger])
         .rpc();
@@ -345,7 +356,10 @@ describe("redoubt: bounty expiry", () => {
           escrow,
           creator: creator.publicKey,
           claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(claimer.publicKey),
           caller: stranger.publicKey,
+          systemProgram: SystemProgram.programId,
         })
         .signers([stranger])
         .rpc();
