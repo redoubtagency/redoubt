@@ -57,4 +57,25 @@ pub mod redoubt {
     pub fn approve_bounty(ctx: Context<ApproveBounty>) -> Result<()> {
         instructions::approve_bounty::handler(ctx)
     }
+
+    pub fn initialize_config(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
+        instructions::initialize_config::handler(ctx, guardian)
+    }
+
+    pub fn set_token_config(
+        ctx: Context<SetTokenConfig>,
+        mint: Pubkey,
+        telecoin_id: [u8; 32],
+        indexer_pubkey: Pubkey,
+    ) -> Result<()> {
+        instructions::set_token_config::handler(ctx, mint, telecoin_id, indexer_pubkey)
+    }
+
+    pub fn pause(ctx: Context<Pause>) -> Result<()> {
+        instructions::pause::handler(ctx)
+    }
+
+    pub fn unpause(ctx: Context<Unpause>) -> Result<()> {
+        instructions::unpause::handler(ctx)
+    }
 }

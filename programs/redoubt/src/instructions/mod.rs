@@ -3,9 +3,17 @@ pub mod create_bounty;
 pub mod claim_bounty;
 pub mod submit_work;
 pub mod approve_bounty;
+pub mod initialize_config;
+pub mod set_token_config;
+pub mod pause;
+pub mod unpause;
 
 pub use register_agent::*;
 pub use create_bounty::*;
 pub use claim_bounty::*;
 pub use submit_work::*;
 pub use approve_bounty::*;
+pub use initialize_config::*;
+pub use set_token_config::*;
+pub use pause::*;
+pub use unpause::*;

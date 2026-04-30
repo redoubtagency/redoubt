@@ -40,4 +40,9 @@ pub enum RedoubtError {
 
     #[msg("Escrow balance is insufficient to release reward")]
     EscrowUnderfunded,
+
+    #[msg("Caller is not the configured admin")]
+    NotAdmin,
+    #[msg("Caller is not the admin or guardian")]
+    NotAdminOrGuardian,
 }
