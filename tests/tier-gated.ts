@@ -102,6 +102,7 @@ describe("redoubt: tier-gated claim", () => {
         bounty: bountyPda,
         escrow: escrowPda,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -109,27 +110,9 @@ describe("redoubt: tier-gated claim", () => {
       .rpc();
   });
 
-  it("rejects claim with no config when tier is required", async () => {
-    let threw = false;
-    try {
-      await program.methods
-        .claimBounty(new BN(Math.floor(Date.now() / 1000) + 600))
-        .accounts({
-          bounty: bountyPda,
-          claimerAgent: claimerAgentPda,
-          claimer: claimer.publicKey,
-          config: null,
-          position: null,
-          instructionsSysvar: null,
-        })
-        .signers([claimer])
-        .rpc();
-    } catch (err: any) {
-      threw = true;
-      assert.match(String(err), /ConfigRequired/);
-    }
-    assert.isTrue(threw, "expected ConfigRequired");
-  });
+  // The "claim with no config" reject case is no longer expressible: Config is now a
+  // required account on claim_bounty (pause-gating reasons), so passing null fails at
+  // Anchor's account validation rather than reaching the handler's tier-gate branch.
 
   it("rejects claim with no position when tier is required", async () => {
     let threw = false;

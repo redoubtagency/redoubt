@@ -43,6 +43,9 @@ pub enum RedoubtError {
     #[msg("Mint account does not match the bounty's escrow mint")]
     InvalidEscrowMint,
 
+    #[msg("Program is paused")]
+    ProgramPaused,
+
     #[msg("Caller is not the bounty creator")]
     NotCreator,
     #[msg("Caller is not the bounty claimer")]

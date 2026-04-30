@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
 use crate::errors::RedoubtError;
-use crate::state::{Agent, Bounty, BountyEscrow, BountyStatus, EscrowType};
+use crate::state::{Agent, Bounty, BountyEscrow, BountyStatus, Config, EscrowType};
 
 #[derive(Accounts)]
 #[instruction(bounty_id: u64)]
@@ -32,6 +32,12 @@ pub struct CreateBounty<'info> {
     )]
     pub creator_agent: Account<'info, Agent>,
 
+    #[account(
+        seeds = [Config::SEED],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, Config>,
+
     #[account(mut)]
     pub creator: Signer<'info>,
 
@@ -48,6 +54,7 @@ pub fn handler(
     approved_claimer: Pubkey,
     min_tier_required: u8,
 ) -> Result<()> {
+    require!(!ctx.accounts.config.paused, RedoubtError::ProgramPaused);
     require!(reward_amount > 0, RedoubtError::InvalidRewardAmount);
     require!(
         metadata_uri.len() <= Bounty::MAX_METADATA_URI_LEN,

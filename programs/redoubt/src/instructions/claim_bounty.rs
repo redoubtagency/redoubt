@@ -23,7 +23,11 @@ pub struct ClaimBounty<'info> {
 
     pub claimer: Signer<'info>,
 
-    pub config: Option<Account<'info, Config>>,
+    #[account(
+        seeds = [Config::SEED],
+        bump = config.bump,
+    )]
+    pub config: Account<'info, Config>,
 
     /// CHECK: Owned by the Printr staking program; bytes parsed against a fixed schema.
     pub position: Option<UncheckedAccount<'info>>,
@@ -33,6 +37,8 @@ pub struct ClaimBounty<'info> {
 }
 
 pub fn handler(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
+    require!(!ctx.accounts.config.paused, RedoubtError::ProgramPaused);
+
     let bounty = &mut ctx.accounts.bounty;
     require!(bounty.status == BountyStatus::Open, RedoubtError::BountyNotOpen);
 
@@ -45,11 +51,7 @@ pub fn handler(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
     }
 
     if bounty.min_tier_required > 0 {
-        let config = ctx
-            .accounts
-            .config
-            .as_ref()
-            .ok_or(error!(RedoubtError::ConfigRequired))?;
+        let config = &ctx.accounts.config;
         let position = ctx
             .accounts
             .position
@@ -60,14 +62,6 @@ pub fn handler(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
             .instructions_sysvar
             .as_ref()
             .ok_or(error!(RedoubtError::InstructionsSysvarRequired))?;
-
-        let (expected_config, _) =
-            Pubkey::find_program_address(&[Config::SEED], ctx.program_id);
-        require_keys_eq!(
-            config.key(),
-            expected_config,
-            RedoubtError::InvalidConfigPda
-        );
 
         require!(
             config.indexer_pubkey != Pubkey::default(),

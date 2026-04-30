@@ -77,6 +77,7 @@ describe("redoubt: resolve dispute", () => {
         bounty,
         escrow,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -93,7 +94,7 @@ describe("redoubt: resolve dispute", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })

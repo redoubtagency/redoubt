@@ -3,7 +3,7 @@ use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::RedoubtError;
-use crate::state::{Agent, Bounty, BountyEscrow, BountyStatus, EscrowType, TokenWhitelist};
+use crate::state::{Agent, Bounty, BountyEscrow, BountyStatus, Config, EscrowType, TokenWhitelist};
 
 #[derive(Accounts)]
 #[instruction(bounty_id: u64)]
@@ -15,7 +15,7 @@ pub struct CreateBountySpl<'info> {
         seeds = [Bounty::SEED, creator.key().as_ref(), &bounty_id.to_le_bytes()],
         bump,
     )]
-    pub bounty: Account<'info, Bounty>,
+    pub bounty: Box<Account<'info, Bounty>>,
 
     #[account(
         init,
@@ -24,30 +24,36 @@ pub struct CreateBountySpl<'info> {
         seeds = [BountyEscrow::SEED, bounty.key().as_ref()],
         bump,
     )]
-    pub escrow: Account<'info, BountyEscrow>,
+    pub escrow: Box<Account<'info, BountyEscrow>>,
 
     #[account(
         seeds = [Agent::SEED, creator.key().as_ref()],
         bump = creator_agent.bump,
         constraint = creator_agent.is_active @ RedoubtError::AgentNotActive,
     )]
-    pub creator_agent: Account<'info, Agent>,
+    pub creator_agent: Box<Account<'info, Agent>>,
 
-    pub mint: Account<'info, Mint>,
+    #[account(
+        seeds = [Config::SEED],
+        bump = config.bump,
+    )]
+    pub config: Box<Account<'info, Config>>,
+
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(
         seeds = [TokenWhitelist::SEED, mint.key().as_ref()],
         bump = token_whitelist.bump,
         constraint = token_whitelist.mint == mint.key() @ RedoubtError::TokenNotWhitelisted,
     )]
-    pub token_whitelist: Account<'info, TokenWhitelist>,
+    pub token_whitelist: Box<Account<'info, TokenWhitelist>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = creator,
     )]
-    pub creator_token_account: Account<'info, TokenAccount>,
+    pub creator_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -55,7 +61,7 @@ pub struct CreateBountySpl<'info> {
         associated_token::mint = mint,
         associated_token::authority = escrow,
     )]
-    pub escrow_token_account: Account<'info, TokenAccount>,
+    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub creator: Signer<'info>,
@@ -75,6 +81,7 @@ pub fn handler(
     approved_claimer: Pubkey,
     min_tier_required: u8,
 ) -> Result<()> {
+    require!(!ctx.accounts.config.paused, RedoubtError::ProgramPaused);
     require!(reward_amount > 0, RedoubtError::InvalidRewardAmount);
     require!(
         metadata_uri.len() <= Bounty::MAX_METADATA_URI_LEN,

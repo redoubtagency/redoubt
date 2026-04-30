@@ -32,6 +32,7 @@ describe("redoubt: bounty happy path", () => {
   let escrowPda: PublicKey;
   let creatorReputationPda: PublicKey;
   let claimerReputationPda: PublicKey;
+  let configPda: PublicKey;
 
   const airdrop = async (pk: PublicKey, lamports: number) => {
     const sig = await connection.requestAirdrop(pk, lamports);
@@ -68,6 +69,10 @@ describe("redoubt: bounty happy path", () => {
     );
     [claimerReputationPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("reputation"), claimer.publicKey.toBuffer()],
+      program.programId,
+    );
+    [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
       program.programId,
     );
   });
@@ -124,6 +129,7 @@ describe("redoubt: bounty happy path", () => {
         bounty: bountyPda,
         escrow: escrowPda,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -173,6 +179,7 @@ describe("redoubt: bounty happy path", () => {
         bounty: restrictedBounty,
         escrow: restrictedEscrow,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -187,7 +194,7 @@ describe("redoubt: bounty happy path", () => {
           bounty: restrictedBounty,
           claimerAgent: claimerAgentPda,
           claimer: claimer.publicKey,
-          config: null,
+          config: configPda,
           position: null,
           instructionsSysvar: null,
         })
@@ -207,7 +214,7 @@ describe("redoubt: bounty happy path", () => {
         bounty: bountyPda,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })
@@ -277,5 +284,71 @@ describe("redoubt: bounty happy path", () => {
     assert.equal(claimerRep.bountiesCompleted.toString(), "1");
     assert.equal(claimerRep.totalValueCompleted.toString(), reward.toString());
     assert.isAbove(claimerRep.lastBountyAt.toNumber(), 0);
+  });
+
+  it("pause blocks new bounty creation", async () => {
+    const admin = (provider.wallet as anchor.Wallet).payer;
+
+    // Pause the program (admin signing as authority).
+    await program.methods
+      .pause()
+      .accounts({
+        config: configPda,
+        authority: admin.publicKey,
+      })
+      .rpc();
+
+    const newId = new BN(99);
+    const [pausedBountyPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("bounty"),
+        creator.publicKey.toBuffer(),
+        newId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId,
+    );
+    const [pausedEscrowPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("escrow"), pausedBountyPda.toBuffer()],
+      program.programId,
+    );
+    const deadline = new BN(Math.floor(Date.now() / 1000) + 3600);
+
+    let threw = false;
+    try {
+      await program.methods
+        .createBounty(
+          newId,
+          metadataUri,
+          namespace,
+          new BN(0.1 * LAMPORTS_PER_SOL),
+          deadline,
+          PublicKey.default,
+          0,
+        )
+        .accounts({
+          bounty: pausedBountyPda,
+          escrow: pausedEscrowPda,
+          creatorAgent: creatorAgentPda,
+          config: configPda,
+          creator: creator.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([creator])
+        .rpc();
+    } catch (err: any) {
+      threw = true;
+      assert.match(String(err), /ProgramPaused/);
+    }
+
+    // Restore unpaused state for any subsequent tests in other files.
+    await program.methods
+      .unpause()
+      .accounts({
+        config: configPda,
+        admin: admin.publicKey,
+      })
+      .rpc();
+
+    assert.isTrue(threw, "expected create_bounty to fail with ProgramPaused");
   });
 });

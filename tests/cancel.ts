@@ -23,6 +23,7 @@ describe("redoubt: cancel bounty", () => {
 
   let creatorAgentPda: PublicKey;
   let claimerAgentPda: PublicKey;
+  let configPda: PublicKey;
 
   const airdrop = async (pk: PublicKey, lamports: number) => {
     const sig = await connection.requestAirdrop(pk, lamports);
@@ -62,6 +63,7 @@ describe("redoubt: cancel bounty", () => {
         bounty,
         escrow,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -81,6 +83,10 @@ describe("redoubt: cancel bounty", () => {
     );
     [claimerAgentPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("agent"), claimer.publicKey.toBuffer()],
+      program.programId,
+    );
+    [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
       program.programId,
     );
 
@@ -177,7 +183,7 @@ describe("redoubt: cancel bounty", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })

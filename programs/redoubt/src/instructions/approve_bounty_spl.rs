@@ -14,7 +14,7 @@ pub struct ApproveBountySpl<'info> {
         has_one = creator @ RedoubtError::NotCreator,
         constraint = bounty.escrow_mint == mint.key() @ RedoubtError::InvalidEscrowMint,
     )]
-    pub bounty: Account<'info, Bounty>,
+    pub bounty: Box<Account<'info, Bounty>>,
 
     #[account(
         mut,
@@ -23,16 +23,16 @@ pub struct ApproveBountySpl<'info> {
         bump = escrow.bump,
         has_one = bounty,
     )]
-    pub escrow: Account<'info, BountyEscrow>,
+    pub escrow: Box<Account<'info, BountyEscrow>>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = escrow,
     )]
-    pub escrow_token_account: Account<'info, TokenAccount>,
+    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: pubkey is verified against bounty.claimer.
     #[account(
@@ -47,7 +47,7 @@ pub struct ApproveBountySpl<'info> {
         associated_token::mint = mint,
         associated_token::authority = claimer,
     )]
-    pub claimer_token_account: Account<'info, TokenAccount>,
+    pub claimer_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init_if_needed,
@@ -56,7 +56,7 @@ pub struct ApproveBountySpl<'info> {
         seeds = [AgentReputation::SEED, bounty.creator.as_ref()],
         bump,
     )]
-    pub creator_reputation: Account<'info, AgentReputation>,
+    pub creator_reputation: Box<Account<'info, AgentReputation>>,
 
     #[account(
         init_if_needed,
@@ -65,7 +65,7 @@ pub struct ApproveBountySpl<'info> {
         seeds = [AgentReputation::SEED, bounty.claimer.as_ref()],
         bump,
     )]
-    pub claimer_reputation: Account<'info, AgentReputation>,
+    pub claimer_reputation: Box<Account<'info, AgentReputation>>,
 
     #[account(mut)]
     pub creator: Signer<'info>,

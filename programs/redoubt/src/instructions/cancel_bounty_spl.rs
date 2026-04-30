@@ -14,7 +14,7 @@ pub struct CancelBountySpl<'info> {
         has_one = creator @ RedoubtError::NotCreator,
         constraint = bounty.escrow_mint == mint.key() @ RedoubtError::InvalidEscrowMint,
     )]
-    pub bounty: Account<'info, Bounty>,
+    pub bounty: Box<Account<'info, Bounty>>,
 
     #[account(
         mut,
@@ -23,23 +23,23 @@ pub struct CancelBountySpl<'info> {
         bump = escrow.bump,
         has_one = bounty,
     )]
-    pub escrow: Account<'info, BountyEscrow>,
+    pub escrow: Box<Account<'info, BountyEscrow>>,
 
-    pub mint: Account<'info, Mint>,
+    pub mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = escrow,
     )]
-    pub escrow_token_account: Account<'info, TokenAccount>,
+    pub escrow_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
         associated_token::mint = mint,
         associated_token::authority = creator,
     )]
-    pub creator_token_account: Account<'info, TokenAccount>,
+    pub creator_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub creator: Signer<'info>,

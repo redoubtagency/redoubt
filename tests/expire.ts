@@ -31,6 +31,7 @@ describe("redoubt: bounty expiry", () => {
 
   let creatorAgentPda: PublicKey;
   let claimerAgentPda: PublicKey;
+  let configPda: PublicKey;
 
   const reputationPda = (wallet: PublicKey) => {
     const [pda] = PublicKey.findProgramAddressSync(
@@ -79,6 +80,7 @@ describe("redoubt: bounty expiry", () => {
         bounty,
         escrow,
         creatorAgent: creatorAgentPda,
+        config: configPda,
         creator: creator.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -98,6 +100,10 @@ describe("redoubt: bounty expiry", () => {
     );
     [claimerAgentPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("agent"), claimer.publicKey.toBuffer()],
+      program.programId,
+    );
+    [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
       program.programId,
     );
 
@@ -170,7 +176,7 @@ describe("redoubt: bounty expiry", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })
@@ -232,7 +238,7 @@ describe("redoubt: bounty expiry", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })
@@ -283,7 +289,7 @@ describe("redoubt: bounty expiry", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })
@@ -340,7 +346,7 @@ describe("redoubt: bounty expiry", () => {
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
-        config: null,
+        config: configPda,
         position: null,
         instructionsSysvar: null,
       })
