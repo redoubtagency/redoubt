@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus};
+use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus, EscrowType};
 
 #[derive(Accounts)]
 pub struct ApproveBounty<'info> {
@@ -59,6 +59,10 @@ pub fn handler(ctx: Context<ApproveBounty>) -> Result<()> {
     require!(
         bounty.status == BountyStatus::Submitted,
         RedoubtError::BountyNotSubmitted
+    );
+    require!(
+        bounty.escrow_type == EscrowType::Sol,
+        RedoubtError::WrongEscrowType
     );
 
     let escrow_info = ctx.accounts.escrow.to_account_info();

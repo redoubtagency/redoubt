@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus, Config};
+use crate::state::{AgentReputation, Bounty, BountyEscrow, BountyStatus, Config, EscrowType};
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ResolveDecision {
@@ -81,6 +81,10 @@ pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Resul
                 | BountyStatus::Disputed
         ),
         RedoubtError::BountyAlreadyResolved
+    );
+    require!(
+        bounty.escrow_type == EscrowType::Sol,
+        RedoubtError::WrongEscrowType
     );
 
     match decision {

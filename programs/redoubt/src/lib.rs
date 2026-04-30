@@ -44,6 +44,28 @@ pub mod redoubt {
         )
     }
 
+    pub fn create_bounty_spl(
+        ctx: Context<CreateBountySpl>,
+        bounty_id: u64,
+        metadata_uri: String,
+        namespace: String,
+        reward_amount: u64,
+        deadline: i64,
+        approved_claimer: Pubkey,
+        min_tier_required: u8,
+    ) -> Result<()> {
+        instructions::create_bounty_spl::handler(
+            ctx,
+            bounty_id,
+            metadata_uri,
+            namespace,
+            reward_amount,
+            deadline,
+            approved_claimer,
+            min_tier_required,
+        )
+    }
+
     pub fn claim_bounty(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
         instructions::claim_bounty::handler(ctx, expiry)
     }
@@ -60,8 +82,16 @@ pub mod redoubt {
         instructions::approve_bounty::handler(ctx)
     }
 
+    pub fn approve_bounty_spl(ctx: Context<ApproveBountySpl>) -> Result<()> {
+        instructions::approve_bounty_spl::handler(ctx)
+    }
+
     pub fn cancel_bounty(ctx: Context<CancelBounty>) -> Result<()> {
         instructions::cancel_bounty::handler(ctx)
+    }
+
+    pub fn cancel_bounty_spl(ctx: Context<CancelBountySpl>) -> Result<()> {
+        instructions::cancel_bounty_spl::handler(ctx)
     }
 
     pub fn expire_bounty(ctx: Context<ExpireBounty>) -> Result<()> {
@@ -90,6 +120,14 @@ pub mod redoubt {
         indexer_pubkey: Pubkey,
     ) -> Result<()> {
         instructions::set_token_config::handler(ctx, mint, telecoin_id, indexer_pubkey)
+    }
+
+    pub fn whitelist_token(ctx: Context<WhitelistToken>) -> Result<()> {
+        instructions::whitelist_token::handler(ctx)
+    }
+
+    pub fn unwhitelist_token(ctx: Context<UnwhitelistToken>) -> Result<()> {
+        instructions::unwhitelist_token::handler(ctx)
     }
 
     pub fn pause(ctx: Context<Pause>) -> Result<()> {

@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::pubkey;
+use anchor_lang::pubkey;
 
 use crate::errors::RedoubtError;
 

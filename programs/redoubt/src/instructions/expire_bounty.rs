@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{Bounty, BountyEscrow, BountyStatus};
+use crate::state::{Bounty, BountyEscrow, BountyStatus, EscrowType};
 
 #[derive(Accounts)]
 pub struct ExpireBounty<'info> {
@@ -37,6 +37,10 @@ pub fn handler(ctx: Context<ExpireBounty>) -> Result<()> {
     require!(
         matches!(bounty.status, BountyStatus::Open | BountyStatus::Claimed),
         RedoubtError::BountyNotExpirable
+    );
+    require!(
+        bounty.escrow_type == EscrowType::Sol,
+        RedoubtError::WrongEscrowType
     );
     require!(now >= bounty.deadline, RedoubtError::BountyNotYetExpired);
 

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::errors::RedoubtError;
-use crate::state::{Bounty, BountyEscrow, BountyStatus};
+use crate::state::{Bounty, BountyEscrow, BountyStatus, EscrowType};
 
 #[derive(Accounts)]
 pub struct CancelBounty<'info> {
@@ -32,6 +32,10 @@ pub fn handler(ctx: Context<CancelBounty>) -> Result<()> {
     require!(
         bounty.status == BountyStatus::Open,
         RedoubtError::BountyNotOpen
+    );
+    require!(
+        bounty.escrow_type == EscrowType::Sol,
+        RedoubtError::WrongEscrowType
     );
 
     bounty.status = BountyStatus::Cancelled;

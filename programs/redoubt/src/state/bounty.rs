@@ -18,6 +18,8 @@ pub struct Bounty {
     pub submitted_at: i64,
     pub min_tier_required: u8,
     pub bump: u8,
+    pub escrow_type: EscrowType,
+    pub escrow_mint: Pubkey,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -31,6 +33,12 @@ pub enum BountyStatus {
     Expired,
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EscrowType {
+    Sol,
+    SplToken,
+}
+
 impl Bounty {
     pub const SEED: &'static [u8] = b"bounty";
     pub const MAX_METADATA_URI_LEN: usize = 200;
@@ -42,21 +50,23 @@ impl Bounty {
     // the escrow auto-pays the claimer — protects workers from creator silence.
     pub const SUBMISSION_GRACE_SECONDS: i64 = 7 * 24 * 3600;
 
-    pub const SPACE: usize = 8
-        + 32
-        + 8
-        + (4 + Self::MAX_METADATA_URI_LEN)
-        + (4 + Self::MAX_NAMESPACE_LEN)
-        + 8
-        + 1
-        + 32
-        + 32
-        + (4 + Self::MAX_SUBMISSION_URI_LEN)
-        + 32
-        + 8
-        + 8
-        + 8
-        + 8
-        + 1
-        + 1;
+    pub const SPACE: usize = 8 // discriminator
+        + 32  // creator
+        + 8   // bounty_id
+        + (4 + Self::MAX_METADATA_URI_LEN)  // metadata_uri
+        + (4 + Self::MAX_NAMESPACE_LEN)     // namespace
+        + 8   // reward_amount
+        + 1   // status (enum tag)
+        + 32  // claimer
+        + 32  // approved_claimer
+        + (4 + Self::MAX_SUBMISSION_URI_LEN)  // submission_uri
+        + 32  // submission_hash
+        + 8   // deadline
+        + 8   // created_at
+        + 8   // claimed_at
+        + 8   // submitted_at
+        + 1   // min_tier_required
+        + 1   // bump
+        + 1   // escrow_type (enum tag)
+        + 32; // escrow_mint
 }

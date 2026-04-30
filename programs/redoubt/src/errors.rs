@@ -36,6 +36,13 @@ pub enum RedoubtError {
     #[msg("Bounty is already in a terminal status")]
     BountyAlreadyResolved,
 
+    #[msg("Token mint is not whitelisted for SPL escrow")]
+    TokenNotWhitelisted,
+    #[msg("Bounty escrow type does not match the instruction")]
+    WrongEscrowType,
+    #[msg("Mint account does not match the bounty's escrow mint")]
+    InvalidEscrowMint,
+
     #[msg("Caller is not the bounty creator")]
     NotCreator,
     #[msg("Caller is not the bounty claimer")]
