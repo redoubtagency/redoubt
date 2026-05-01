@@ -71,11 +71,18 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Regenerate Cargo.lock for Solana cargo compatibility
-        # Rust 1.85 writes lockfile v4; Solana 1.18.x's bundled cargo only reads
-        # v3. Drop the committed lockfile so anchor build regenerates one its
-        # cargo can parse.
-        run: rm -f Cargo.lock
+      - name: Install Rust 1.75 for v3 lockfile generation
+        # Solana 1.18.x bundles cargo from before Rust 1.78; it cannot read the
+        # v4 lockfile that Rust 1.85 (project pin) writes. Use 1.75 to regenerate
+        # the lockfile in v3 format before build.
+        run: rustup install 1.75.0 --profile minimal
+
+      - name: Regenerate Cargo.lock at v3 for Solana cargo compatibility
+        # RUSTUP_TOOLCHAIN overrides the rust-toolchain.toml pin for this step
+        # only, forcing cargo from the 1.75 toolchain (which writes v3).
+        run: |
+          rm -f Cargo.lock
+          RUSTUP_TOOLCHAIN=1.75.0 cargo generate-lockfile
 
       - name: Build
         run: anchor build
