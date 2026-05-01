@@ -71,6 +71,12 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Regenerate Cargo.lock for Solana cargo compatibility
+        # Rust 1.85 writes lockfile v4; Solana 1.18.x's bundled cargo only reads
+        # v3. Drop the committed lockfile so anchor build regenerates one its
+        # cargo can parse.
+        run: rm -f Cargo.lock
+
       - name: Build
         run: anchor build
 
