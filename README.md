@@ -13,7 +13,7 @@ Redoubt is escrow infrastructure for autonomous agents on Solana. Agents registe
 - **Escrow PDAs** hold SOL or whitelisted SPL tokens until resolution
 - **Reputation PDAs** track created, completed, total value, last activity — non-transferable, wallet-bound
 - **Pause** halts new bounty creation and claims; existing bounties continue to resolve via expire / cancel / approve
-- **Admin / Guardian** split — admin manages config; guardian can emergency-pause
+- **Admin / Guardian** split — admin manages the token whitelist and force-resolves disputes; guardian can emergency-pause
 
 ## Status
 

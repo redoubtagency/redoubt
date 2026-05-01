@@ -138,8 +138,8 @@ Per-mint, admin-managed. Existence of the PDA = the mint is whitelisted for SPL 
 | Claimed | `submit_work` | Submitted | claimer | sets submission_uri + hash |
 | Submitted | `approve_bounty` | Approved | creator | drains escrow to claimer; reputation++ |
 | Submitted | `expire_submitted` | Approved | anyone, after deadline + 7d grace | drains escrow to claimer; reputation++ |
-| any non-terminal | `resolve_dispute(AwardClaimer)` | Approved | admin | drains escrow to claimer; reputation++ |
-| any non-terminal | `resolve_dispute(RefundCreator)` | Cancelled | admin | refunds escrow to creator |
+| Claimed / Submitted / Disputed | `resolve_dispute(AwardClaimer)` | Approved | admin | drains escrow to claimer; reputation++ |
+| Claimed / Submitted / Disputed | `resolve_dispute(RefundCreator)` | Cancelled | admin | refunds escrow to creator |
 
 The 7-day grace on `expire_submitted` is hard-coded as `Bounty::SUBMISSION_GRACE_SECONDS`. It exists to protect workers from creator silence — once the grace passes, anyone can crank the instruction and the claimer is paid.
 
@@ -158,7 +158,7 @@ The 7-day grace on `expire_submitted` is hard-coded as `Bounty::SUBMISSION_GRACE
 - **`cancel_bounty()`** — Open → Cancelled. Creator-only. Refunds escrow.
 - **`expire_bounty()`** — Open or Claimed → Expired after `deadline`. Permissionless. Refunds escrow to creator.
 - **`expire_submitted()`** — Submitted → Approved after `deadline + 7d`. Permissionless. Pays claimer + reputation++.
-- **`resolve_dispute(decision)`** — admin force-resolve. `decision` is either `AwardClaimer` (Submitted-style payout) or `RefundCreator` (cancel-style refund).
+- **`resolve_dispute(decision)`** — admin force-resolve. Requires the bounty to have a claimer (status in `Claimed` / `Submitted` / `Disputed`). `decision` is either `AwardClaimer` (Submitted-style payout) or `RefundCreator` (cancel-style refund). Open bounties must be cancelled by the creator (`cancel_bounty`) or expired permissionlessly after deadline (`expire_bounty`).
 
 ### Bounty Lifecycle (SPL Escrow)
 
@@ -169,7 +169,7 @@ The SPL variants mirror the SOL flow but route through SPL Token CPIs signed by 
 - **`cancel_bounty_spl()`** — refunds creator's ATA, closes escrow ATA + bounty.
 - **`expire_bounty_spl()`** — Open or Claimed → Expired after `deadline`. Permissionless. Refunds creator's ATA.
 - **`expire_submitted_spl()`** — Submitted → Approved after `deadline + 7d`. Permissionless. Pays claimer's ATA + reputation++.
-- **`resolve_dispute_spl(decision)`** — admin force-resolve. Same `AwardClaimer` / `RefundCreator` semantics as the SOL variant, with one asymmetry: SPL requires the bounty to have a claimer (status in `Claimed` / `Submitted` / `Disputed`). Open SPL bounties must be cancelled by the creator (`cancel_bounty_spl`) or expired permissionlessly after deadline (`expire_bounty_spl`); admin override is not available because the destination ATAs require a real owner key.
+- **`resolve_dispute_spl(decision)`** — admin force-resolve. Same semantics as the SOL variant: requires status in `Claimed` / `Submitted` / `Disputed`. Open SPL bounties use `cancel_bounty_spl` (creator) or `expire_bounty_spl` (anyone, post-deadline) for the same reason — and additionally because SPL destination ATAs require a real owner key.
 
 ### Admin / Configuration
 
