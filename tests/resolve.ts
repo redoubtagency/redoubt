@@ -11,9 +11,10 @@ import * as crypto from "crypto";
 
 import { Redoubt } from "../target/types/redoubt";
 
-// Admin force-resolve. The Config singleton is initialized by config.ts (which
-// runs alphabetically before this file), and config.admin is the provider's
-// wallet. We exercise both ResolveDecision variants plus the rejection paths.
+// Admin force-resolve. The Config singleton is initialized by 00-config.ts
+// (which runs alphabetically before this file), and config.admin is the
+// provider's wallet. We exercise both ResolveDecision variants plus the
+// rejection paths.
 
 describe("redoubt: resolve dispute", () => {
   const provider = anchor.AnchorProvider.env();

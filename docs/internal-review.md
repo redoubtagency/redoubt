@@ -69,11 +69,11 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 #### M-02 — No event emissions on critical state changes
 
-Across all admin instructions: `initialize_config`, `set_token_config`, `whitelist_token`, `unwhitelist_token`, `pause`, `unpause` — no `emit!()` macros are present. State changes are only observable by polling.
+Across all admin instructions: `initialize_config`, `whitelist_token`, `unwhitelist_token`, `pause`, `unpause` — no `emit!()` macros are present. State changes are only observable by polling.
 
 **Risk:** off-chain monitoring (e.g., for unauthorized admin actions) is harder than it should be. A malicious admin could pause-unpause-pause repeatedly to disrupt service, and the only signal is balance / Config polling.
 
-**Recommendation:** add `emit!()` for at least: pause, unpause, set_token_config, whitelist_token, unwhitelist_token, initialize_config. Cheap and high-value for incident response.
+**Recommendation:** add `emit!()` for: pause, unpause, whitelist_token, unwhitelist_token, initialize_config. Cheap and high-value for incident response.
 
 ### Low
 
@@ -137,19 +137,15 @@ Across all admin instructions: `initialize_config`, `set_token_config`, `whiteli
 
 Behavior, not a bug. Worth knowing for downstream tooling.
 
-#### I-02 — `RefundCreator` on Open bounty creates a shared default-pubkey reputation PDA
-
-`instructions/resolve_dispute.rs` — when admin refunds an Open bounty (no claimer), `claimer_reputation` is derived from `[b"reputation", Pubkey::default()]`. This PDA is shared across all such refunds and accumulates only `last_bounty_at` updates (no completion counters). Acceptable: the shared PDA carries no security weight since it tracks no completions.
-
-#### I-03 — `AwardClaimer` from `Claimed` produces `Approved` with `submitted_at = 0`
+#### I-02 — `AwardClaimer` from `Claimed` produces `Approved` with `submitted_at = 0`
 
 `instructions/resolve_dispute.rs` — when admin force-pays a claimer who never submitted, the resulting bounty has `status = Approved` but `submitted_at = 0`. Consumers reading the bounty post-resolution should not assume `submitted_at > 0` implies submission occurred.
 
-#### I-04 — Bounty IDs are creator-supplied; collision is prevented by PDA init
+#### I-03 — Bounty IDs are creator-supplied; collision is prevented by PDA init
 
 `instructions/create_bounty.rs`, `create_bounty_spl.rs` — `bounty_id` is part of the seed. Creating two bounties with the same `(creator, bounty_id)` would fail at the second `init` because the PDA already exists. No special handling required.
 
-#### I-05 — SPL approve: creator pays for claimer's ATA init if absent
+#### I-04 — SPL approve: creator pays for claimer's ATA init if absent
 
 `instructions/approve_bounty_spl.rs` — `claimer_token_account` uses `init_if_needed` with `payer = creator`. If the claimer doesn't already have an ATA for the bounty's mint, creator pays the rent (~0.002 SOL) on top of the bounty reward. Acceptable; worth knowing.
 

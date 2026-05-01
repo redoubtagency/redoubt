@@ -90,13 +90,6 @@ pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Resul
 
     match decision {
         ResolveDecision::AwardClaimer => {
-            require!(
-                matches!(
-                    bounty.status,
-                    BountyStatus::Claimed | BountyStatus::Submitted | BountyStatus::Disputed
-                ),
-                RedoubtError::BountyNotClaimed
-            );
             require_keys_eq!(
                 ctx.accounts.claimer.key(),
                 bounty.claimer,
@@ -144,8 +137,10 @@ pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Resul
                 creator_rep.bump = ctx.bumps.creator_reputation;
                 creator_rep.last_bounty_at = now;
             }
+            // bounty.claimer is guaranteed non-default since the outer status
+            // check restricts to Claimed | Submitted | Disputed (all set claimer).
             let claimer_rep = &mut ctx.accounts.claimer_reputation;
-            if claimer_rep.agent == Pubkey::default() && bounty.claimer != Pubkey::default() {
+            if claimer_rep.agent == Pubkey::default() {
                 claimer_rep.agent = bounty.claimer;
                 claimer_rep.bump = ctx.bumps.claimer_reputation;
                 claimer_rep.last_bounty_at = now;
