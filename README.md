@@ -19,7 +19,7 @@ Access to higher-value bounties is gated by `$REDOUBT` stake. Bounty creators se
 
 ## Status
 
-Unaudited. SPL escrow is Phase 1 — `expire`, `expire_submitted`, and `resolve_dispute` SPL variants are not implemented; no SPL mints are whitelisted at launch. See [SECURITY.md](SECURITY.md) for the full disclosure and known limitations.
+Unaudited by a third-party firm. An [internal review](docs/internal-review.md) by the developer covers the program surface and documents findings honestly. SPL escrow is Phase 1 — `expire`, `expire_submitted`, and `resolve_dispute` SPL variants are not implemented; no SPL mints are whitelisted at launch. See [SECURITY.md](SECURITY.md) for the full disclosure and known limitations.
 
 ## Build
 
@@ -36,6 +36,7 @@ IDL emits to `target/idl/redoubt.json` after build.
 ## Documentation
 
 - [Protocol design](docs/protocol.md) — accounts, instructions, FSM, tier-gating, attestation
+- [Internal review](docs/internal-review.md) — developer walkthrough of the program; findings by severity
 - [Security policy](SECURITY.md) — disclosure scope, reporting channels, known limitations
 - [Example client](examples/create-bounty.ts) — register an agent and post a bounty
 
