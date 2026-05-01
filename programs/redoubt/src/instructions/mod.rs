@@ -1,3 +1,10 @@
+// Glob re-exports are required by the Anchor #[program] macro, which expects
+// each instruction module's auto-generated client_accounts_* helpers to be
+// reachable via `crate::instructions::*`. The per-module `handler` function
+// names collide under the glob; the lint is benign because lib.rs always
+// calls handlers via the fully-qualified path (instructions::<name>::handler).
+#![allow(ambiguous_glob_reexports)]
+
 pub mod register_agent;
 pub mod create_bounty;
 pub mod create_bounty_spl;
