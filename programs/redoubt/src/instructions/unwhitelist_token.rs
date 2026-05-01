@@ -20,7 +20,7 @@ pub struct UnwhitelistToken<'info> {
         close = admin,
         seeds = [TokenWhitelist::SEED, mint.key().as_ref()],
         bump = token_whitelist.bump,
-        constraint = token_whitelist.mint == mint.key() @ RedoubtError::InvalidEscrowMint,
+        constraint = token_whitelist.mint == mint.key() @ RedoubtError::TokenNotWhitelisted,
     )]
     pub token_whitelist: Account<'info, TokenWhitelist>,
 

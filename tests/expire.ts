@@ -130,13 +130,13 @@ describe("redoubt: bounty expiry", () => {
   it("expire_bounty: anyone can expire an Open bounty past deadline", async () => {
     const id = new BN(4001);
     const reward = new BN(0.3 * LAMPORTS_PER_SOL);
-    const deadline = Math.floor(Date.now() / 1000) + 2;
+    const deadline = Math.floor(Date.now() / 1000) + 5;
     const { bounty, escrow } = await createBounty(id, reward, deadline);
 
     const escrowBefore = await connection.getBalance(escrow);
     const creatorBefore = await connection.getBalance(creator.publicKey);
 
-    await sleep(3000);
+    await sleep(6000);
 
     await program.methods
       .expireBounty()
@@ -166,7 +166,7 @@ describe("redoubt: bounty expiry", () => {
   it("expire_bounty: anyone can expire a Claimed bounty past deadline", async () => {
     const id = new BN(4002);
     const reward = new BN(0.2 * LAMPORTS_PER_SOL);
-    const deadline = Math.floor(Date.now() / 1000) + 2;
+    const deadline = Math.floor(Date.now() / 1000) + 5;
     const { bounty, escrow } = await createBounty(id, reward, deadline);
 
     await program.methods
@@ -180,7 +180,7 @@ describe("redoubt: bounty expiry", () => {
       .signers([claimer])
       .rpc();
 
-    await sleep(3000);
+    await sleep(6000);
 
     await program.methods
       .expireBounty()
@@ -275,7 +275,7 @@ describe("redoubt: bounty expiry", () => {
     // Bounty in Submitted state, deadline already passed but grace (7d) not elapsed.
     const id = new BN(4005);
     const reward = new BN(0.1 * LAMPORTS_PER_SOL);
-    const deadline = Math.floor(Date.now() / 1000) + 2;
+    const deadline = Math.floor(Date.now() / 1000) + 5;
     const { bounty, escrow } = await createBounty(id, reward, deadline);
 
     await program.methods
@@ -301,7 +301,7 @@ describe("redoubt: bounty expiry", () => {
       .signers([claimer])
       .rpc();
 
-    await sleep(3000);
+    await sleep(6000);
 
     let threw = false;
     try {

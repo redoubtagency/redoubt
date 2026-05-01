@@ -92,8 +92,16 @@ pub mod redoubt {
         instructions::expire_bounty::handler(ctx)
     }
 
+    pub fn expire_bounty_spl(ctx: Context<ExpireBountySpl>) -> Result<()> {
+        instructions::expire_bounty_spl::handler(ctx)
+    }
+
     pub fn expire_submitted(ctx: Context<ExpireSubmitted>) -> Result<()> {
         instructions::expire_submitted::handler(ctx)
+    }
+
+    pub fn expire_submitted_spl(ctx: Context<ExpireSubmittedSpl>) -> Result<()> {
+        instructions::expire_submitted_spl::handler(ctx)
     }
 
     pub fn resolve_dispute(
@@ -103,12 +111,15 @@ pub mod redoubt {
         instructions::resolve_dispute::handler(ctx, decision)
     }
 
-    pub fn initialize_config(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
-        instructions::initialize_config::handler(ctx, guardian)
+    pub fn resolve_dispute_spl(
+        ctx: Context<ResolveDisputeSpl>,
+        decision: ResolveDecision,
+    ) -> Result<()> {
+        instructions::resolve_dispute_spl::handler(ctx, decision)
     }
 
-    pub fn set_token_config(ctx: Context<SetTokenConfig>, mint: Pubkey) -> Result<()> {
-        instructions::set_token_config::handler(ctx, mint)
+    pub fn initialize_config(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
+        instructions::initialize_config::handler(ctx, guardian)
     }
 
     pub fn whitelist_token(ctx: Context<WhitelistToken>) -> Result<()> {

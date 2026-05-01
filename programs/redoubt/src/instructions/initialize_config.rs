@@ -24,7 +24,6 @@ pub fn handler(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
     config.admin = ctx.accounts.admin.key();
     config.guardian = guardian;
     config.paused = false;
-    config.redoubt_mint = Pubkey::default();
     config.bump = ctx.bumps.config;
     Ok(())
 }

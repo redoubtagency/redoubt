@@ -234,36 +234,39 @@ describe("redoubt: resolve dispute", () => {
     );
   });
 
-  it("admin refunds an Open (unclaimed) bounty to the creator", async () => {
+  it("rejects RefundCreator on an Open bounty (no claimer)", async () => {
     const id = new BN(5003);
     const reward = new BN(0.2 * LAMPORTS_PER_SOL);
     const { bounty, escrow } = await createBounty(id, reward);
 
-    const escrowBefore = await connection.getBalance(escrow);
-    const creatorBefore = await connection.getBalance(creator.publicKey);
-
-    // Bounty is Open — bounty.claimer is Pubkey::default(), so the claimer_reputation
-    // PDA the program expects is derived from the zero key, not from claimer.publicKey.
-    await program.methods
-      .resolveDispute({ refundCreator: {} })
-      .accounts({
-        bounty,
-        escrow,
-        creator: creator.publicKey,
-        claimer: claimer.publicKey,
-        creatorReputation: reputationPda(creator.publicKey),
-        claimerReputation: reputationPda(PublicKey.default),
-        config: configPda,
-        admin: admin.publicKey,
-        systemProgram: SystemProgram.programId,
-      })
-      .rpc();
+    let threw = false;
+    try {
+      await program.methods
+        .resolveDispute({ refundCreator: {} })
+        .accounts({
+          bounty,
+          escrow,
+          creator: creator.publicKey,
+          claimer: claimer.publicKey,
+          creatorReputation: reputationPda(creator.publicKey),
+          claimerReputation: reputationPda(PublicKey.default),
+          config: configPda,
+          admin: admin.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch (err: any) {
+      threw = true;
+      assert.match(String(err), /BountyAlreadyResolved/);
+    }
+    assert.isTrue(threw, "expected resolve to fail with BountyAlreadyResolved");
 
     const bountyAccount = await program.account.bounty.fetch(bounty);
-    assert.deepEqual(bountyAccount.status, { cancelled: {} });
-
-    const creatorAfter = await connection.getBalance(creator.publicKey);
-    assert.equal(creatorAfter - creatorBefore, escrowBefore);
+    assert.deepEqual(
+      bountyAccount.status,
+      { open: {} },
+      "bounty should remain Open after rejection",
+    );
   });
 
   it("rejects AwardClaimer on a never-claimed bounty", async () => {
@@ -290,9 +293,11 @@ describe("redoubt: resolve dispute", () => {
         .rpc();
     } catch (err: any) {
       threw = true;
-      assert.match(String(err), /BountyNotClaimed/);
+      // Outer status check now requires Claimed | Submitted | Disputed, so Open
+      // trips BountyAlreadyResolved before the AwardClaimer-specific check.
+      assert.match(String(err), /BountyAlreadyResolved/);
     }
-    assert.isTrue(threw, "expected resolve to fail with BountyNotClaimed");
+    assert.isTrue(threw, "expected resolve to fail with BountyAlreadyResolved");
   });
 
   it("rejects resolve from a non-admin signer", async () => {

@@ -32,6 +32,20 @@ describe("redoubt: config + admin", () => {
     await airdrop(guardian.publicKey, 1 * LAMPORTS_PER_SOL);
   });
 
+  // Safety net: ensure the program is unpaused after this file's tests so
+  // downstream test files start from a known state, even if a test threw
+  // mid-pause.
+  after(async () => {
+    try {
+      await program.methods
+        .unpause()
+        .accounts({ config: configPda, admin: admin.publicKey })
+        .rpc();
+    } catch {
+      // Best-effort cleanup; may already be unpaused.
+    }
+  });
+
   it("initializes the config singleton", async () => {
     await program.methods
       .initializeConfig(guardian.publicKey)
@@ -46,7 +60,6 @@ describe("redoubt: config + admin", () => {
     assert.equal(config.admin.toBase58(), admin.publicKey.toBase58());
     assert.equal(config.guardian.toBase58(), guardian.publicKey.toBase58());
     assert.equal(config.paused, false);
-    assert.equal(config.redoubtMint.toBase58(), PublicKey.default.toBase58());
   });
 
   it("rejects re-initialization", async () => {
@@ -64,41 +77,6 @@ describe("redoubt: config + admin", () => {
       threw = true;
     }
     assert.isTrue(threw, "second initialize should fail");
-  });
-
-  it("admin sets token config post-launch", async () => {
-    const mint = Keypair.generate().publicKey;
-
-    await program.methods
-      .setTokenConfig(mint)
-      .accounts({
-        config: configPda,
-        admin: admin.publicKey,
-      })
-      .rpc();
-
-    const config = await program.account.config.fetch(configPda);
-    assert.equal(config.redoubtMint.toBase58(), mint.toBase58());
-  });
-
-  it("rejects set_token_config from non-admin", async () => {
-    const mint = Keypair.generate().publicKey;
-
-    let threw = false;
-    try {
-      await program.methods
-        .setTokenConfig(mint)
-        .accounts({
-          config: configPda,
-          admin: stranger.publicKey,
-        })
-        .signers([stranger])
-        .rpc();
-    } catch (err: any) {
-      threw = true;
-      assert.match(String(err), /NotAdmin|ConstraintHasOne/);
-    }
-    assert.isTrue(threw, "non-admin should not be able to set token config");
   });
 
   it("guardian can pause", async () => {

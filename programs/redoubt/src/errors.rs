@@ -63,7 +63,4 @@ pub enum RedoubtError {
     NotAdmin,
     #[msg("Caller is not the admin or guardian")]
     NotAdminOrGuardian,
-
-    #[msg("Config PDA address does not match the canonical derivation")]
-    InvalidConfigPda,
 }

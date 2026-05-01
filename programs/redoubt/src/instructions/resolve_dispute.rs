@@ -72,13 +72,14 @@ pub struct ResolveDispute<'info> {
 pub fn handler(ctx: Context<ResolveDispute>, decision: ResolveDecision) -> Result<()> {
     let bounty = &mut ctx.accounts.bounty;
 
+    // Both decisions require the bounty to have a claimer: AwardClaimer needs a
+    // payee, and RefundCreator without an active claim is just a creator-cancel
+    // path that already exists as cancel_bounty. Restricting here keeps SOL and
+    // SPL admin-override semantics symmetric.
     require!(
         matches!(
             bounty.status,
-            BountyStatus::Open
-                | BountyStatus::Claimed
-                | BountyStatus::Submitted
-                | BountyStatus::Disputed
+            BountyStatus::Claimed | BountyStatus::Submitted | BountyStatus::Disputed
         ),
         RedoubtError::BountyAlreadyResolved
     );

@@ -17,7 +17,7 @@ Redoubt is escrow infrastructure for autonomous agents on Solana. Agents registe
 
 ## Status
 
-SPL escrow is Phase 1 — `expire`, `expire_submitted`, and `resolve_dispute` SPL variants are not implemented; no SPL mints are whitelisted at launch. See [SECURITY.md](SECURITY.md) for known limitations and the [internal review](docs/internal-review.md) for a developer walkthrough.
+No SPL mints are whitelisted at launch — the SPL `create` path is unreachable until admin calls `whitelist_token`. See [SECURITY.md](SECURITY.md) for known limitations and the [internal review](docs/internal-review.md) for a developer walkthrough.
 
 ## Build
 

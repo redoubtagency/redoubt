@@ -38,6 +38,7 @@ pub fn handler(ctx: Context<CancelBounty>) -> Result<()> {
         RedoubtError::WrongEscrowType
     );
 
+    // Escrow lamports (reward + rent) route to creator via Anchor's `close = creator`.
     bounty.status = BountyStatus::Cancelled;
 
     Ok(())

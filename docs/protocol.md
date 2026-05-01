@@ -85,12 +85,11 @@ Counters are monotonic and saturating. No decrement, no transfer.
 
 | Field | Type | Notes |
 |---|---|---|
-| `admin` | Pubkey | controls config and token operations |
+| `admin` | Pubkey | admin authority for token-whitelist + dispute resolution |
 | `guardian` | Pubkey | emergency-pause authority |
 | `paused` | bool | global pause flag |
-| `redoubt_mint` | Pubkey | the canonical token mint reference |
 
-Initialized once via `initialize_config`. The mint is set via `set_token_config` (admin-only).
+Initialized once via `initialize_config`.
 
 ### TokenWhitelist
 
@@ -161,20 +160,20 @@ The 7-day grace on `expire_submitted` is hard-coded as `Bounty::SUBMISSION_GRACE
 - **`expire_submitted()`** — Submitted → Approved after `deadline + 7d`. Permissionless. Pays claimer + reputation++.
 - **`resolve_dispute(decision)`** — admin force-resolve. `decision` is either `AwardClaimer` (Submitted-style payout) or `RefundCreator` (cancel-style refund).
 
-### Bounty Lifecycle (SPL Escrow — Phase 1)
+### Bounty Lifecycle (SPL Escrow)
 
 The SPL variants mirror the SOL flow but route through SPL Token CPIs signed by the escrow PDA. The escrow PDA owns an Associated Token Account that holds the locked tokens.
 
 - **`create_bounty_spl(...)`** — same parameters as `create_bounty`. Requires the bounty's mint to be whitelisted via `TokenWhitelist`. Pause-gated.
 - **`approve_bounty_spl()`** — drains the escrow ATA to the claimer's ATA, closes both, releases rent.
 - **`cancel_bounty_spl()`** — refunds creator's ATA, closes escrow ATA + bounty.
-
-`expire_bounty_spl`, `expire_submitted_spl`, and `resolve_dispute_spl` are not yet implemented. SPL bounties currently rely on creator approval or creator cancel for resolution. Mints should not be whitelisted until those paths exist.
+- **`expire_bounty_spl()`** — Open or Claimed → Expired after `deadline`. Permissionless. Refunds creator's ATA.
+- **`expire_submitted_spl()`** — Submitted → Approved after `deadline + 7d`. Permissionless. Pays claimer's ATA + reputation++.
+- **`resolve_dispute_spl(decision)`** — admin force-resolve. Same `AwardClaimer` / `RefundCreator` semantics as the SOL variant, with one asymmetry: SPL requires the bounty to have a claimer (status in `Claimed` / `Submitted` / `Disputed`). Open SPL bounties must be cancelled by the creator (`cancel_bounty_spl`) or expired permissionlessly after deadline (`expire_bounty_spl`); admin override is not available because the destination ATAs require a real owner key.
 
 ### Admin / Configuration
 
 - **`initialize_config(guardian)`** — initializes the singleton `Config` PDA. The caller becomes admin; `guardian` is set as a separate pause authority.
-- **`set_token_config(mint)`** — admin-only. Sets the canonical token mint reference on the `Config` PDA.
 - **`whitelist_token()`** / **`unwhitelist_token()`** — admin-only. Per-mint.
 - **`pause()`** — admin or guardian. Sets `Config.paused = true`.
 - **`unpause()`** — admin only.

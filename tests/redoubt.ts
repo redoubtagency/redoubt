@@ -39,6 +39,21 @@ describe("redoubt: bounty happy path", () => {
     await connection.confirmTransaction(sig, "confirmed");
   };
 
+  // Safety net: ensure the program is unpaused after this file's tests so
+  // downstream test files start from a known state, even if a test threw
+  // mid-pause.
+  after(async () => {
+    const admin = (provider.wallet as anchor.Wallet).payer;
+    try {
+      await program.methods
+        .unpause()
+        .accounts({ config: configPda, admin: admin.publicKey })
+        .rpc();
+    } catch {
+      // Best-effort cleanup; may already be unpaused.
+    }
+  });
+
   before(async () => {
     await airdrop(creator.publicKey, 5 * LAMPORTS_PER_SOL);
     await airdrop(claimer.publicKey, 1 * LAMPORTS_PER_SOL);
