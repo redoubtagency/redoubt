@@ -1,10 +1,10 @@
 # Protocol Design
 
-Redoubt is a single Solana program implementing three on-chain registries — identity, bounties, and reputation — plus the escrow and admin machinery that supports them. This document is a developer reference for integrating with the deployed program.
+Redoubt is a Solana program providing escrow for autonomous agents. Three onchain registries — identity, bounties, and reputation — plus the per-bounty escrow PDAs that custody funds during work resolution. This document is a developer reference for integrating with the deployed program.
 
 ## Overview
 
-The protocol coordinates work between autonomous agents:
+The protocol implements three primitives for autonomous agents:
 
 1. **Identity** — each wallet may register one `Agent` PDA carrying a DID URI and a freeform type marker.
 2. **Bounties** — escrow-backed tasks moving through a 7-state FSM. Funds settle on approval or are refunded on expire/cancel.
@@ -196,7 +196,7 @@ When `min_tier_required > 0`, `claim_bounty` requires three things in addition t
    "redoubt-attest-v1" || wallet || position || telecoin_id || expiry_le
    ```
 
-   The signer pubkey on the verify instruction must match `Config.indexer_pubkey`. The expiry encoded in the message is checked against the on-chain clock.
+   The signer pubkey on the verify instruction must match `Config.indexer_pubkey`. The expiry encoded in the message is checked against the onchain clock.
 
 The indexer is a stateless off-chain service that reads stake state and signs attestations on request. It custodies only its signing key — it never holds funds and never moves stake.
 

@@ -47,7 +47,7 @@ Severity is assigned conservatively — borderline items are tagged the higher o
 
 #### H-01 — `initialize_config` is callable by anyone before first init
 
-`instructions/initialize_config.rs` — the singleton `Config` PDA is created via Anchor's `init` constraint. The first caller becomes `admin` and sets `guardian`. There is no on-chain check that the caller is the program's deploy authority, the program's upgrade authority, or any pre-committed pubkey.
+`instructions/initialize_config.rs` — the singleton `Config` PDA is created via Anchor's `init` constraint. The first caller becomes `admin` and sets `guardian`. There is no onchain check that the caller is the program's deploy authority, the program's upgrade authority, or any pre-committed pubkey.
 
 **Risk:** on mainnet, after `solana program deploy` completes but before the deployer's `initialize_config` transaction lands, a third party monitoring the program ID could front-run the deployer and become admin. The deployer would be locked out of admin operations for the lifetime of the program.
 
@@ -75,7 +75,7 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 #### M-02 — Indexer is a single trusted Ed25519 signer
 
-`attestation.rs`, `instructions/claim_bounty.rs` — tier-gated claims (`min_tier_required > 0`) require an Ed25519 attestation signed by `Config.indexer_pubkey`. The on-chain code verifies the signature and message binding but does not (and cannot) verify the indexer's off-chain reasoning about who owns which Printr stake position.
+`attestation.rs`, `instructions/claim_bounty.rs` — tier-gated claims (`min_tier_required > 0`) require an Ed25519 attestation signed by `Config.indexer_pubkey`. The onchain code verifies the signature and message binding but does not (and cannot) verify the indexer's off-chain reasoning about who owns which Printr stake position.
 
 **Risk:** if the indexer's signing key is compromised, the attacker can mint attestations for any (wallet, position, expiry) tuple and claim any tier-gated bounty regardless of actual stake.
 
@@ -83,7 +83,7 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 **Mitigation (operational):** indexer signing key should be hardware-isolated. Indexer service should never log or transmit the private key.
 
-**Future hardening (v2+):** multi-sig attestation (require 2-of-3 indexers), or pure on-chain stake verification when Printr's PDA seed scheme is public.
+**Future hardening (v2+):** multi-sig attestation (require 2-of-3 indexers), or pure onchain stake verification when Printr's PDA seed scheme is public.
 
 #### M-03 — Position-claimer binding is verified off-chain only
 
@@ -91,13 +91,13 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 **Risk:** subset of M-02. A buggy or compromised indexer could sign a binding between a claimer and a position belonging to a different wallet, allowing the claimer to satisfy a tier check using someone else's stake.
 
-**Mitigation:** same as M-02 — operational discipline around the indexer signing key plus eventual on-chain verification.
+**Mitigation:** same as M-02 — operational discipline around the indexer signing key plus eventual onchain verification.
 
 #### M-04 — Token-config fields are admin-mutable indefinitely
 
 `instructions/set_token_config.rs` — `redoubt_mint`, `redoubt_telecoin_id`, and `indexer_pubkey` can be changed by admin at any time. There is no "config locked" flag.
 
-**Risk:** after the staking token is announced, admin could swap `redoubt_mint` to a different mint, breaking integrations that derived the token from on-chain state. In practice, admin would not do this — but a compromised admin or a key handover gone wrong could.
+**Risk:** after the staking token is announced, admin could swap `redoubt_mint` to a different mint, breaking integrations that derived the token from onchain state. In practice, admin would not do this — but a compromised admin or a key handover gone wrong could.
 
 **Recommendation:** add a `config_locked` boolean that, once set true (admin-only, irreversible), prevents `set_token_config` from accepting new values. Allow indexer-pubkey rotation to still work via a separate `rotate_indexer` instruction so key hygiene isn't blocked.
 
