@@ -16,7 +16,19 @@ pub struct Unpause<'info> {
     pub admin: Signer<'info>,
 }
 
+#[event]
+pub struct ProgramUnpausedEvent {
+    pub admin: Pubkey,
+    pub timestamp: i64,
+}
+
 pub fn handler(ctx: Context<Unpause>) -> Result<()> {
     ctx.accounts.config.paused = false;
+
+    emit!(ProgramUnpausedEvent {
+        admin: ctx.accounts.admin.key(),
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     Ok(())
 }

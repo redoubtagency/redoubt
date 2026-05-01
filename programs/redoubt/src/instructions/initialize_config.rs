@@ -19,11 +19,25 @@ pub struct InitializeConfig<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[event]
+pub struct ConfigInitializedEvent {
+    pub admin: Pubkey,
+    pub guardian: Pubkey,
+    pub timestamp: i64,
+}
+
 pub fn handler(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config.admin = ctx.accounts.admin.key();
     config.guardian = guardian;
     config.paused = false;
     config.bump = ctx.bumps.config;
+
+    emit!(ConfigInitializedEvent {
+        admin: config.admin,
+        guardian,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     Ok(())
 }

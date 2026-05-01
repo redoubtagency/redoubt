@@ -210,6 +210,20 @@ They do not fire on cancel, expire-without-submission, or `resolve_dispute(Refun
 
 The current schema (created, completed, value, last activity) is intentionally minimal.
 
+## Events
+
+Admin-action instructions emit structured events that off-chain monitors can subscribe to via the program's logs (Anchor's `emit!()` pattern). Each event carries the actor's pubkey and a unix timestamp.
+
+| Event | Fires from | Fields |
+|---|---|---|
+| `ConfigInitializedEvent` | `initialize_config` | `admin`, `guardian`, `timestamp` |
+| `ProgramPausedEvent` | `pause` | `authority`, `timestamp` |
+| `ProgramUnpausedEvent` | `unpause` | `admin`, `timestamp` |
+| `TokenWhitelistedEvent` | `whitelist_token` | `mint`, `admin`, `timestamp` |
+| `TokenUnwhitelistedEvent` | `unwhitelist_token` | `mint`, `admin`, `timestamp` |
+
+Bounty lifecycle transitions do not emit events — that state is fully recoverable from the `Bounty` PDA and the transactions that touched it. Events are reserved for admin actions where the state change is otherwise only observable by polling.
+
 ## Errors
 
 All program errors are defined in [`programs/redoubt/src/errors.rs`](../programs/redoubt/src/errors.rs) and are surfaced through the IDL with their human-readable messages. Common categories:

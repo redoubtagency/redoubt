@@ -28,7 +28,20 @@ pub struct UnwhitelistToken<'info> {
     pub admin: Signer<'info>,
 }
 
-pub fn handler(_ctx: Context<UnwhitelistToken>) -> Result<()> {
+#[event]
+pub struct TokenUnwhitelistedEvent {
+    pub mint: Pubkey,
+    pub admin: Pubkey,
+    pub timestamp: i64,
+}
+
+pub fn handler(ctx: Context<UnwhitelistToken>) -> Result<()> {
+    emit!(TokenUnwhitelistedEvent {
+        mint: ctx.accounts.mint.key(),
+        admin: ctx.accounts.admin.key(),
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     // Anchor handles closing via `close = admin` on the account constraint.
     Ok(())
 }

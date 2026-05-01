@@ -15,6 +15,12 @@ pub struct Pause<'info> {
     pub authority: Signer<'info>,
 }
 
+#[event]
+pub struct ProgramPausedEvent {
+    pub authority: Pubkey,
+    pub timestamp: i64,
+}
+
 pub fn handler(ctx: Context<Pause>) -> Result<()> {
     let config = &mut ctx.accounts.config;
     let caller = ctx.accounts.authority.key();
@@ -23,5 +29,11 @@ pub fn handler(ctx: Context<Pause>) -> Result<()> {
         RedoubtError::NotAdminOrGuardian
     );
     config.paused = true;
+
+    emit!(ProgramPausedEvent {
+        authority: caller,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+
     Ok(())
 }

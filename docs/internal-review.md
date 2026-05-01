@@ -67,13 +67,11 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 **Recommendation:** for a launch with non-trivial TVL, add `set_admin` (admin-signed, with a 24-48 hour timelock) and `set_guardian` (admin-signed). For a smaller launch, document immutability in `SECURITY.md` so users know.
 
-#### M-02 — No event emissions on critical state changes
+#### M-02 — No event emissions on critical state changes (resolved)
 
-Across all admin instructions: `initialize_config`, `whitelist_token`, `unwhitelist_token`, `pause`, `unpause` — no `emit!()` macros are present. State changes are only observable by polling.
+Originally: admin instructions (`initialize_config`, `whitelist_token`, `unwhitelist_token`, `pause`, `unpause`) emitted no events; admin actions were only observable by polling Config / balance.
 
-**Risk:** off-chain monitoring (e.g., for unauthorized admin actions) is harder than it should be. A malicious admin could pause-unpause-pause repeatedly to disrupt service, and the only signal is balance / Config polling.
-
-**Recommendation:** add `emit!()` for: pause, unpause, whitelist_token, unwhitelist_token, initialize_config. Cheap and high-value for incident response.
+**Resolution:** five `#[event]` types added — `ConfigInitializedEvent`, `ProgramPausedEvent`, `ProgramUnpausedEvent`, `TokenWhitelistedEvent`, `TokenUnwhitelistedEvent`. Each fires after the state mutation in its corresponding handler, carrying the actor's pubkey and a unix timestamp. Off-chain monitors can subscribe to the program's logs and react in real time. See `docs/protocol.md` § Events.
 
 ### Low
 
@@ -169,6 +167,6 @@ The following were checked and found acceptable:
 
 This single-session walkthrough surfaced findings that are predominantly design tradeoffs and operational considerations rather than critical bugs in the core escrow or FSM logic. The program follows standard Anchor patterns; account validation, signer requirements, and arithmetic safety are correctly applied across the instruction surface.
 
-The most important finding is **H-01** — `initialize_config` front-running — which is a deploy-time process concern rather than a code defect. The remaining medium-severity items concentrate around admin key management (M-01) and operational visibility (M-02). Most are resolvable with small targeted additions in a follow-up release.
+The most important finding is **H-01** — `initialize_config` front-running — which is a deploy-time process concern rather than a code defect. The remaining medium-severity item is **M-01** (admin/guardian key immutability); **M-02** has been resolved by adding `#[event]` emissions across all admin instructions.
 
 This review should not be cited as evidence of security.
