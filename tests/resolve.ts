@@ -71,7 +71,6 @@ describe("redoubt: resolve dispute", () => {
         reward,
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -89,14 +88,12 @@ describe("redoubt: resolve dispute", () => {
   const driveToSubmitted = async (id: BN, reward: BN) => {
     const { bounty, escrow } = await createBounty(id, reward);
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();

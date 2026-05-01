@@ -25,8 +25,6 @@ pub fn handler(ctx: Context<InitializeConfig>, guardian: Pubkey) -> Result<()> {
     config.guardian = guardian;
     config.paused = false;
     config.redoubt_mint = Pubkey::default();
-    config.redoubt_telecoin_id = [0u8; 32];
-    config.indexer_pubkey = Pubkey::default();
     config.bump = ctx.bumps.config;
     Ok(())
 }

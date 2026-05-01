@@ -105,7 +105,6 @@ async function main() {
       reward,
       deadline,
       PublicKey.default, // approved_claimer = default → open to anyone
-      0,                 // min_tier_required = 0 → no stake gating
     )
     .accounts({
       bounty: bountyPda,

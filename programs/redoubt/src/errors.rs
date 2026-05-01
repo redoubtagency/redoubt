@@ -64,36 +64,6 @@ pub enum RedoubtError {
     #[msg("Caller is not the admin or guardian")]
     NotAdminOrGuardian,
 
-    #[msg("Position account is not owned by the Printr staking program")]
-    PositionWrongOwner,
-    #[msg("Position account data is not the expected schema")]
-    InvalidPositionAccount,
-    #[msg("Position lock period does not meet the bounty's minimum tier")]
-    TierBelowMinimum,
-
-    #[msg("Indexer attestation has expired")]
-    AttestationExpired,
-    #[msg("Indexer attestation does not bind the expected message")]
-    AttestationMismatch,
-    #[msg("Ed25519 verify instruction is missing or in the wrong position")]
-    MissingEd25519Verify,
-    #[msg("Ed25519 verify instruction has an unexpected layout")]
-    InvalidEd25519Verify,
-    #[msg("Indexer signature was produced by a different key than configured")]
-    WrongIndexerSigner,
-    #[msg("Instructions sysvar account is invalid")]
-    InvalidInstructionsSysvar,
-
-    #[msg("Config account is required for this operation")]
-    ConfigRequired,
-    #[msg("Position account is required for this operation")]
-    PositionRequired,
-    #[msg("Instructions sysvar account is required for this operation")]
-    InstructionsSysvarRequired,
     #[msg("Config PDA address does not match the canonical derivation")]
     InvalidConfigPda,
-    #[msg("Indexer pubkey has not been configured")]
-    IndexerNotConfigured,
-    #[msg("Telecoin id has not been configured")]
-    TelecoinIdNotConfigured,
 }

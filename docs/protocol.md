@@ -12,7 +12,7 @@ The protocol implements three primitives for autonomous agents:
 
 Design principles:
 
-- **Custody only what's necessary.** Reward funds sit in escrow PDAs the program controls. Stake stays in its source program; Redoubt reads its state but never holds it.
+- **Custody only what's necessary.** Reward funds sit in escrow PDAs the program controls. The protocol custodies nothing beyond per-bounty escrow.
 - **No platform fee.** Approved bounties drain the full escrow to the claimer.
 - **Funds are never trapped.** Pause gates new commitment but never blocks existing bounties from terminal-state paths (cancel / expire / resolve).
 - **Reputation is non-transferable.** Counters live in wallet-bound PDAs. There is no transfer instruction.
@@ -30,7 +30,7 @@ The unit of work. Created by `create_bounty` (SOL escrow) or `create_bounty_spl`
 | `creator` | Pubkey | wallet that posted the bounty |
 | `bounty_id` | u64 | creator-chosen id, used in seed |
 | `metadata_uri` | String | off-chain pointer; ≤ 200 chars |
-| `namespace` | String | grouping label for indexers; ≤ 64 chars |
+| `namespace` | String | grouping label for off-chain consumers; ≤ 64 chars |
 | `reward_amount` | u64 | lamports (SOL) or token base units |
 | `status` | enum | one of `Open` / `Claimed` / `Submitted` / `Approved` / `Cancelled` / `Expired` / `Disputed` |
 | `claimer` | Pubkey | set on `claim_bounty`; default pre-claim |
@@ -39,7 +39,6 @@ The unit of work. Created by `create_bounty` (SOL escrow) or `create_bounty_spl`
 | `submission_hash` | [u8; 32] | SHA-256 binding for the off-chain submission |
 | `deadline` | i64 | unix timestamp; enforced by expire paths |
 | `created_at`, `claimed_at`, `submitted_at` | i64 | event timestamps |
-| `min_tier_required` | u8 | 0–6; 0 disables tier-gating |
 | `escrow_type` | enum | `Sol` or `SplToken` |
 | `escrow_mint` | Pubkey | mint when SPL; `default` when SOL |
 
@@ -89,11 +88,9 @@ Counters are monotonic and saturating. No decrement, no transfer.
 | `admin` | Pubkey | controls config and token operations |
 | `guardian` | Pubkey | emergency-pause authority |
 | `paused` | bool | global pause flag |
-| `redoubt_mint` | Pubkey | the staking token mint |
-| `redoubt_telecoin_id` | [u8; 32] | identifier of the staking campaign |
-| `indexer_pubkey` | Pubkey | authorized signer for tier attestations |
+| `redoubt_mint` | Pubkey | the canonical token mint reference |
 
-Initialized once via `initialize_config`. The token-related fields are set together via `set_token_config` (admin-only).
+Initialized once via `initialize_config`. The mint is set via `set_token_config` (admin-only).
 
 ### TokenWhitelist
 
@@ -136,7 +133,7 @@ Per-mint, admin-managed. Existence of the PDA = the mint is whitelisted for SPL 
 
 | From | Instruction | To | Caller | Effect |
 |---|---|---|---|---|
-| Open | `claim_bounty` | Claimed | claimer (tier-checked if required) | sets claimer + claimed_at |
+| Open | `claim_bounty` | Claimed | claimer | sets claimer + claimed_at |
 | Open | `cancel_bounty` | Cancelled | creator | refunds escrow to creator |
 | Open / Claimed | `expire_bounty` | Expired | anyone, after deadline | refunds escrow to creator |
 | Claimed | `submit_work` | Submitted | claimer | sets submission_uri + hash |
@@ -155,8 +152,8 @@ The 7-day grace on `expire_submitted` is hard-coded as `Bounty::SUBMISSION_GRACE
 
 ### Bounty Lifecycle (SOL Escrow)
 
-- **`create_bounty(bounty_id, metadata_uri, namespace, reward_amount, deadline, approved_claimer, min_tier_required)`** — initializes `Bounty` + `BountyEscrow` PDAs and transfers `reward_amount` lamports into escrow. Pause-gated.
-- **`claim_bounty(expiry)`** — moves Open → Claimed. If `min_tier_required > 0`, requires a Printr position account + a preceding Ed25519 attestation from the indexer (see [Tier-Gating](#tier-gating)). Pause-gated.
+- **`create_bounty(bounty_id, metadata_uri, namespace, reward_amount, deadline, approved_claimer)`** — initializes `Bounty` + `BountyEscrow` PDAs and transfers `reward_amount` lamports into escrow. Pause-gated.
+- **`claim_bounty()`** — moves Open → Claimed. If `approved_claimer` is set, only that wallet may claim. Pause-gated.
 - **`submit_work(submission_uri, submission_hash)`** — moves Claimed → Submitted.
 - **`approve_bounty()`** — moves Submitted → Approved. Drains escrow to claimer, closes both PDAs, increments creator and claimer reputation.
 - **`cancel_bounty()`** — Open → Cancelled. Creator-only. Refunds escrow.
@@ -177,30 +174,10 @@ The SPL variants mirror the SOL flow but route through SPL Token CPIs signed by 
 ### Admin / Configuration
 
 - **`initialize_config(guardian)`** — initializes the singleton `Config` PDA. The caller becomes admin; `guardian` is set as a separate pause authority.
-- **`set_token_config(mint, telecoin_id, indexer_pubkey)`** — admin-only. Sets the staking token mint, its campaign id, and the indexer key authorized to sign tier attestations.
+- **`set_token_config(mint)`** — admin-only. Sets the canonical token mint reference on the `Config` PDA.
 - **`whitelist_token()`** / **`unwhitelist_token()`** — admin-only. Per-mint.
 - **`pause()`** — admin or guardian. Sets `Config.paused = true`.
 - **`unpause()`** — admin only.
-
-## Tier-Gating
-
-Bounty creators set `min_tier_required` between 0 and 6. Tier maps 1:1 to the staking program's six lock periods: T1 = 7 days, T2 = 14, T3 = 30, T4 = 60, T5 = 90, T6 = 180.
-
-When `min_tier_required > 0`, `claim_bounty` requires three things in addition to the standard accounts:
-
-1. **Position account** — a stake position owned by the configured staking program (`T8HsGYv7sMk3kTnyaRqZrbRPuntYzdh12evXBkprint`). The program parses the account's data and rejects if the lock-period index is below the bounty's tier.
-2. **Instructions sysvar** — passed as an account so the program can introspect prior instructions in the same transaction.
-3. **Ed25519 verify instruction** — must precede the `claim_bounty` call in the transaction. The signed message is:
-
-   ```
-   "redoubt-attest-v1" || wallet || position || telecoin_id || expiry_le
-   ```
-
-   The signer pubkey on the verify instruction must match `Config.indexer_pubkey`. The expiry encoded in the message is checked against the onchain clock.
-
-The indexer is a stateless off-chain service that reads stake state and signs attestations on request. It custodies only its signing key — it never holds funds and never moves stake.
-
-When `min_tier_required = 0`, none of these accounts/instructions are required. Open-tier bounties can be created and claimed without any indexer involvement.
 
 ## Pause Behavior
 
@@ -232,7 +209,7 @@ Increments fire on:
 
 They do not fire on cancel, expire-without-submission, or `resolve_dispute(RefundCreator)` — those are refunds, not completions.
 
-The current schema (created, completed, value, last activity) is intentionally minimal. Extensions for disputes lost, validations performed, and validator-pool removals are not yet wired.
+The current schema (created, completed, value, last activity) is intentionally minimal.
 
 ## Errors
 
@@ -241,6 +218,5 @@ All program errors are defined in [`programs/redoubt/src/errors.rs`](../programs
 - **State** — `BountyNotOpen`, `BountyNotClaimed`, `BountyNotSubmitted`, `BountyAlreadyResolved`
 - **Auth** — `NotCreator`, `NotClaimer`, `NotApprovedClaimer`, `NotAdmin`, `NotAdminOrGuardian`
 - **Validation** — `InvalidRewardAmount`, `InvalidDeadline`, `MetadataUriTooLong`, `EmptyDidUri`
-- **Tier-gating** — `PositionWrongOwner`, `TierBelowMinimum`, `AttestationExpired`, `WrongIndexerSigner`, `MissingEd25519Verify`
 - **Lifecycle** — `BountyNotYetExpired`, `SubmissionGraceNotElapsed`, `WrongEscrowType`, `TokenNotWhitelisted`
 - **Pause** — `ProgramPaused`

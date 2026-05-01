@@ -57,7 +57,6 @@ describe("redoubt: cancel bounty", () => {
         reward,
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -178,14 +177,12 @@ describe("redoubt: cancel bounty", () => {
     const { bounty, escrow } = await createOpenBounty(id, reward);
 
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();

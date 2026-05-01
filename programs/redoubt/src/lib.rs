@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
 
-pub mod attestation;
 pub mod errors;
 pub mod instructions;
-pub mod printr;
 pub mod state;
 
 use instructions::*;
@@ -30,7 +28,6 @@ pub mod redoubt {
         reward_amount: u64,
         deadline: i64,
         approved_claimer: Pubkey,
-        min_tier_required: u8,
     ) -> Result<()> {
         instructions::create_bounty::handler(
             ctx,
@@ -40,7 +37,6 @@ pub mod redoubt {
             reward_amount,
             deadline,
             approved_claimer,
-            min_tier_required,
         )
     }
 
@@ -52,7 +48,6 @@ pub mod redoubt {
         reward_amount: u64,
         deadline: i64,
         approved_claimer: Pubkey,
-        min_tier_required: u8,
     ) -> Result<()> {
         instructions::create_bounty_spl::handler(
             ctx,
@@ -62,12 +57,11 @@ pub mod redoubt {
             reward_amount,
             deadline,
             approved_claimer,
-            min_tier_required,
         )
     }
 
-    pub fn claim_bounty(ctx: Context<ClaimBounty>, expiry: i64) -> Result<()> {
-        instructions::claim_bounty::handler(ctx, expiry)
+    pub fn claim_bounty(ctx: Context<ClaimBounty>) -> Result<()> {
+        instructions::claim_bounty::handler(ctx)
     }
 
     pub fn submit_work(
@@ -113,13 +107,8 @@ pub mod redoubt {
         instructions::initialize_config::handler(ctx, guardian)
     }
 
-    pub fn set_token_config(
-        ctx: Context<SetTokenConfig>,
-        mint: Pubkey,
-        telecoin_id: [u8; 32],
-        indexer_pubkey: Pubkey,
-    ) -> Result<()> {
-        instructions::set_token_config::handler(ctx, mint, telecoin_id, indexer_pubkey)
+    pub fn set_token_config(ctx: Context<SetTokenConfig>, mint: Pubkey) -> Result<()> {
+        instructions::set_token_config::handler(ctx, mint)
     }
 
     pub fn whitelist_token(ctx: Context<WhitelistToken>) -> Result<()> {

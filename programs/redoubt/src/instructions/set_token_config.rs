@@ -16,15 +16,8 @@ pub struct SetTokenConfig<'info> {
     pub admin: Signer<'info>,
 }
 
-pub fn handler(
-    ctx: Context<SetTokenConfig>,
-    mint: Pubkey,
-    telecoin_id: [u8; 32],
-    indexer_pubkey: Pubkey,
-) -> Result<()> {
+pub fn handler(ctx: Context<SetTokenConfig>, mint: Pubkey) -> Result<()> {
     let config = &mut ctx.accounts.config;
     config.redoubt_mint = mint;
-    config.redoubt_telecoin_id = telecoin_id;
-    config.indexer_pubkey = indexer_pubkey;
     Ok(())
 }

@@ -47,8 +47,6 @@ describe("redoubt: config + admin", () => {
     assert.equal(config.guardian.toBase58(), guardian.publicKey.toBase58());
     assert.equal(config.paused, false);
     assert.equal(config.redoubtMint.toBase58(), PublicKey.default.toBase58());
-    assert.equal(config.indexerPubkey.toBase58(), PublicKey.default.toBase58());
-    assert.deepEqual(Array.from(config.redoubtTelecoinId as Uint8Array), new Array(32).fill(0));
   });
 
   it("rejects re-initialization", async () => {
@@ -70,12 +68,9 @@ describe("redoubt: config + admin", () => {
 
   it("admin sets token config post-launch", async () => {
     const mint = Keypair.generate().publicKey;
-    const telecoinId = new Uint8Array(32);
-    telecoinId.fill(7);
-    const indexerKey = Keypair.generate().publicKey;
 
     await program.methods
-      .setTokenConfig(mint, Array.from(telecoinId), indexerKey)
+      .setTokenConfig(mint)
       .accounts({
         config: configPda,
         admin: admin.publicKey,
@@ -84,22 +79,15 @@ describe("redoubt: config + admin", () => {
 
     const config = await program.account.config.fetch(configPda);
     assert.equal(config.redoubtMint.toBase58(), mint.toBase58());
-    assert.equal(config.indexerPubkey.toBase58(), indexerKey.toBase58());
-    assert.deepEqual(
-      Array.from(config.redoubtTelecoinId as Uint8Array),
-      Array.from(telecoinId),
-    );
   });
 
   it("rejects set_token_config from non-admin", async () => {
     const mint = Keypair.generate().publicKey;
-    const telecoinId = new Array(32).fill(1);
-    const indexerKey = Keypair.generate().publicKey;
 
     let threw = false;
     try {
       await program.methods
-        .setTokenConfig(mint, telecoinId, indexerKey)
+        .setTokenConfig(mint)
         .accounts({
           config: configPda,
           admin: stranger.publicKey,

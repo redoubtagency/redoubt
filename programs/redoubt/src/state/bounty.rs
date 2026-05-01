@@ -16,7 +16,6 @@ pub struct Bounty {
     pub created_at: i64,
     pub claimed_at: i64,
     pub submitted_at: i64,
-    pub min_tier_required: u8,
     pub bump: u8,
     pub escrow_type: EscrowType,
     pub escrow_mint: Pubkey,
@@ -65,7 +64,6 @@ impl Bounty {
         + 8   // created_at
         + 8   // claimed_at
         + 8   // submitted_at
-        + 1   // min_tier_required
         + 1   // bump
         + 1   // escrow_type (enum tag)
         + 32; // escrow_mint

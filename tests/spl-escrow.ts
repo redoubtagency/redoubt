@@ -215,7 +215,6 @@ describe("redoubt: spl escrow", () => {
         new BN(REWARD.toString()),
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -244,14 +243,12 @@ describe("redoubt: spl escrow", () => {
 
     // Claim
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
@@ -325,7 +322,6 @@ describe("redoubt: spl escrow", () => {
         new BN(REWARD.toString()),
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -394,7 +390,6 @@ describe("redoubt: spl escrow", () => {
           new BN(REWARD.toString()),
           deadline,
           PublicKey.default,
-          0,
         )
         .accounts({
           bounty,
@@ -438,7 +433,6 @@ describe("redoubt: spl escrow", () => {
         new BN(REWARD.toString()),
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -458,14 +452,12 @@ describe("redoubt: spl escrow", () => {
       .rpc();
 
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();

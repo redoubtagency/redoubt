@@ -123,7 +123,6 @@ describe("redoubt: bounty happy path", () => {
         reward,
         deadline,
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty: bountyPda,
@@ -173,7 +172,6 @@ describe("redoubt: bounty happy path", () => {
         new BN(0.1 * LAMPORTS_PER_SOL),
         deadline,
         creator.publicKey,
-        0,
       )
       .accounts({
         bounty: restrictedBounty,
@@ -189,14 +187,12 @@ describe("redoubt: bounty happy path", () => {
     let threw = false;
     try {
       await program.methods
-        .claimBounty(new BN(0))
+        .claimBounty()
         .accounts({
           bounty: restrictedBounty,
           claimerAgent: claimerAgentPda,
           claimer: claimer.publicKey,
           config: configPda,
-          position: null,
-          instructionsSysvar: null,
         })
         .signers([claimer])
         .rpc();
@@ -209,14 +205,12 @@ describe("redoubt: bounty happy path", () => {
 
   it("claimer claims the open bounty", async () => {
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty: bountyPda,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
@@ -323,7 +317,6 @@ describe("redoubt: bounty happy path", () => {
           new BN(0.1 * LAMPORTS_PER_SOL),
           deadline,
           PublicKey.default,
-          0,
         )
         .accounts({
           bounty: pausedBountyPda,

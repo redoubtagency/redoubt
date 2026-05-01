@@ -52,7 +52,6 @@ pub fn handler(
     reward_amount: u64,
     deadline: i64,
     approved_claimer: Pubkey,
-    min_tier_required: u8,
 ) -> Result<()> {
     require!(!ctx.accounts.config.paused, RedoubtError::ProgramPaused);
     require!(reward_amount > 0, RedoubtError::InvalidRewardAmount);
@@ -92,7 +91,6 @@ pub fn handler(
     bounty.created_at = now;
     bounty.claimed_at = 0;
     bounty.submitted_at = 0;
-    bounty.min_tier_required = min_tier_required;
     bounty.bump = ctx.bumps.bounty;
     bounty.escrow_type = EscrowType::Sol;
     bounty.escrow_mint = Pubkey::default();

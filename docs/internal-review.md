@@ -1,24 +1,18 @@
 # Internal Review
 
-This document records a structured walkthrough of the Redoubt Anchor program performed by the developer in a single session.
-
-**This is not a third-party audit.** A real audit involves multiple senior engineers over weeks, formal verification, fuzz harnesses, and adversarial scenario testing — none of which this document represents. Use this review as a record of what was checked and what was found, not as a substitute for external review.
+This document records a structured walkthrough of the Redoubt Anchor program performed by the developer in a single session. Use this document as a record of what was checked and what was found.
 
 ## Scope
 
 In scope (read line-by-line):
 
-- All 19 instruction handlers in `programs/redoubt/src/instructions/`
+- All instruction handlers in `programs/redoubt/src/instructions/`
 - All account state structs in `programs/redoubt/src/state/`
-- Ed25519 attestation verification (`attestation.rs`)
-- Printr position parsing (`printr.rs`)
 - Error definitions (`errors.rs`)
 - Module wiring (`lib.rs`, `instructions/mod.rs`)
 
 Out of scope:
 
-- The off-chain indexer (separate codebase, not yet open-sourced)
-- The Printr staking program (third-party)
 - The TypeScript test suite (verified passing; not reviewed for completeness)
 - Build configuration, toolchain pinning, and CI
 
@@ -28,7 +22,7 @@ Each instruction was checked for:
 
 - **Authorization** — signer requirements, `has_one` constraints, custom auth checks
 - **State preconditions** — required `BountyStatus`, `EscrowType`, account ownership
-- **Account validation** — PDA seed derivation, `mut` / `close` constraints, optional account handling
+- **Account validation** — PDA seed derivation, `mut` / `close` constraints
 - **Arithmetic safety** — overflow / underflow, `checked_*` operations
 - **Funds movement** — escrow drains route to the correct party, in the correct amount
 - **Pause coverage** — gated where it should be, deliberately not gated where existing bounties need to resolve
@@ -59,7 +53,7 @@ Severity is assigned conservatively — borderline items are tagged the higher o
 
 If front-run, the response is to deploy a new program ID (the old one is now controlled by the front-runner) and start over. There is no recovery in place.
 
-**Mitigation (code change, optional):** make the deploy authority's pubkey a `pub const ADMIN_BOOTSTRAP: Pubkey` and require `caller == ADMIN_BOOTSTRAP` in `initialize_config`. Trades flexibility for safety; recommended for a real audit cycle.
+**Mitigation (code change, optional):** make the deploy authority's pubkey a `pub const ADMIN_BOOTSTRAP: Pubkey` and require `caller == ADMIN_BOOTSTRAP` in `initialize_config`. Trades flexibility for safety.
 
 ### Medium
 
@@ -73,35 +67,7 @@ If front-run, the response is to deploy a new program ID (the old one is now con
 
 **Recommendation:** for a launch with non-trivial TVL, add `set_admin` (admin-signed, with a 24-48 hour timelock) and `set_guardian` (admin-signed). For a smaller launch, document immutability in `SECURITY.md` so users know.
 
-#### M-02 — Indexer is a single trusted Ed25519 signer
-
-`attestation.rs`, `instructions/claim_bounty.rs` — tier-gated claims (`min_tier_required > 0`) require an Ed25519 attestation signed by `Config.indexer_pubkey`. The onchain code verifies the signature and message binding but does not (and cannot) verify the indexer's off-chain reasoning about who owns which Printr stake position.
-
-**Risk:** if the indexer's signing key is compromised, the attacker can mint attestations for any (wallet, position, expiry) tuple and claim any tier-gated bounty regardless of actual stake.
-
-**Mitigation (in code):** key is rotatable via `set_token_config` (admin). On compromise, admin rotates and all in-flight attestations signed by the old key become invalid.
-
-**Mitigation (operational):** indexer signing key should be hardware-isolated. Indexer service should never log or transmit the private key.
-
-**Future hardening (v2+):** multi-sig attestation (require 2-of-3 indexers), or pure onchain stake verification when Printr's PDA seed scheme is public.
-
-#### M-03 — Position-claimer binding is verified off-chain only
-
-`instructions/claim_bounty.rs` — the program verifies the position account is owned by the Printr program and parses its `lock_period_index`, but does not verify that the position belongs to the claiming wallet. The (claimer, position) binding is part of the indexer's signed attestation message, so it depends entirely on the indexer correctly checking position ownership before signing.
-
-**Risk:** subset of M-02. A buggy or compromised indexer could sign a binding between a claimer and a position belonging to a different wallet, allowing the claimer to satisfy a tier check using someone else's stake.
-
-**Mitigation:** same as M-02 — operational discipline around the indexer signing key plus eventual onchain verification.
-
-#### M-04 — Token-config fields are admin-mutable indefinitely
-
-`instructions/set_token_config.rs` — `redoubt_mint`, `redoubt_telecoin_id`, and `indexer_pubkey` can be changed by admin at any time. There is no "config locked" flag.
-
-**Risk:** after the staking token is announced, admin could swap `redoubt_mint` to a different mint, breaking integrations that derived the token from onchain state. In practice, admin would not do this — but a compromised admin or a key handover gone wrong could.
-
-**Recommendation:** add a `config_locked` boolean that, once set true (admin-only, irreversible), prevents `set_token_config` from accepting new values. Allow indexer-pubkey rotation to still work via a separate `rotate_indexer` instruction so key hygiene isn't blocked.
-
-#### M-05 — No event emissions on critical state changes
+#### M-02 — No event emissions on critical state changes
 
 Across all admin instructions: `initialize_config`, `set_token_config`, `whitelist_token`, `unwhitelist_token`, `pause`, `unpause` — no `emit!()` macros are present. State changes are only observable by polling.
 
@@ -129,21 +95,13 @@ Across all admin instructions: `initialize_config`, `set_token_config`, `whiteli
 
 **Recommendation:** add `update_agent` (signed by `wallet`) that allows changing `did_uri`. Trivial addition.
 
-#### L-04 — `min_tier_required > 6` produces an unclaimable bounty
-
-`instructions/create_bounty.rs`, `create_bounty_spl.rs` — the parameter is a `u8` with no upper bound. Printr lock periods are 0-5 (T1-T6), so the tier check `lock_period_index >= min_tier_required - 1` is unsatisfiable for any `min_tier_required >= 7`.
-
-**Risk:** a creator could lock funds in escrow that no one can ever claim. They can still cancel before deadline or expire after, so funds aren't permanently lost.
-
-**Recommendation:** `require!(min_tier_required <= 6, ...)` in both create handlers.
-
-#### L-05 — `metadata_uri` and `namespace` length-checked but not non-empty
+#### L-04 — `metadata_uri` and `namespace` length-checked but not non-empty
 
 `instructions/create_bounty.rs`, `create_bounty_spl.rs` — both fields can be empty strings. `submit_work` does require a non-empty `submission_uri`, so the asymmetry is inconsistent.
 
 **Recommendation:** add `require!(!metadata_uri.is_empty(), ...)` and similarly for namespace, or document that empty values are intentional.
 
-#### L-06 — Permissionless expire instructions have no incentive
+#### L-05 — Permissionless expire instructions have no incentive
 
 `instructions/expire_bounty.rs`, `expire_submitted.rs` — `caller` pays transaction fees but receives nothing. In practice, expire_bounty's incentive is the creator (who wants their refund), and expire_submitted's incentive is the claimer (who wants their reward) — but neither is guaranteed to crank.
 
@@ -151,13 +109,13 @@ Across all admin instructions: `initialize_config`, `set_token_config`, `whiteli
 
 **Recommendation:** consider a small SOL bounty paid to `caller` from the escrow on successful expiry — say 0.001 SOL. Adds incentive without meaningfully eating reward.
 
-#### L-07 — `SUBMISSION_GRACE_SECONDS` hardcoded to 7 days
+#### L-06 — `SUBMISSION_GRACE_SECONDS` hardcoded to 7 days
 
-`state/bounty.rs:51` — the grace window before `expire_submitted` becomes callable is a const. Changing it requires a code upgrade.
+`state/bounty.rs` — the grace window before `expire_submitted` becomes callable is a const. Changing it requires a code upgrade.
 
 **Recommendation:** acceptable as-is for MVP; revisit if real-world usage shows 7 days is wrong, and consider moving to `Config` then.
 
-#### L-08 — Reputation init cost falls on the caller
+#### L-07 — Reputation init cost falls on the caller
 
 `approve_bounty`, `approve_bounty_spl`, `expire_submitted`, `resolve_dispute` — all use `init_if_needed` for both creator and claimer reputation PDAs, with `payer = creator` (or `caller` in `expire_submitted`, `admin` in `resolve_dispute`).
 
@@ -165,9 +123,9 @@ Across all admin instructions: `initialize_config`, `set_token_config`, `whiteli
 
 **Recommendation:** acceptable as-is. Worth documenting.
 
-#### L-09 — `resolve_dispute(AwardClaimer)` can pay claimers without submitted work
+#### L-08 — `resolve_dispute(AwardClaimer)` can pay claimers without submitted work
 
-`instructions/resolve_dispute.rs:90-134` — admin can force-pay a claimer when bounty is in `Claimed` state (claimer claimed but never submitted). This is by design — admin override needs to be powerful enough to resolve genuinely stuck bounties — but it's a power that could be misused.
+`instructions/resolve_dispute.rs` — admin can force-pay a claimer when bounty is in `Claimed` state (claimer claimed but never submitted). This is by design — admin override needs to be powerful enough to resolve genuinely stuck bounties — but it's a power that could be misused.
 
 **Recommendation:** acceptable for MVP; document explicitly. Consider requiring a non-empty `submission_uri` for the AwardClaimer path in v2.
 
@@ -181,7 +139,7 @@ Behavior, not a bug. Worth knowing for downstream tooling.
 
 #### I-02 — `RefundCreator` on Open bounty creates a shared default-pubkey reputation PDA
 
-`instructions/resolve_dispute.rs:135-153` — when admin refunds an Open bounty (no claimer), `claimer_reputation` is derived from `[b"reputation", Pubkey::default()]`. This PDA is shared across all such refunds and accumulates only `last_bounty_at` updates (no completion counters). Acceptable: the shared PDA carries no security weight since it tracks no completions.
+`instructions/resolve_dispute.rs` — when admin refunds an Open bounty (no claimer), `claimer_reputation` is derived from `[b"reputation", Pubkey::default()]`. This PDA is shared across all such refunds and accumulates only `last_bounty_at` updates (no completion counters). Acceptable: the shared PDA carries no security weight since it tracks no completions.
 
 #### I-03 — `AwardClaimer` from `Claimed` produces `Approved` with `submitted_at = 0`
 
@@ -193,7 +151,7 @@ Behavior, not a bug. Worth knowing for downstream tooling.
 
 #### I-05 — SPL approve: creator pays for claimer's ATA init if absent
 
-`instructions/approve_bounty_spl.rs:44-50` — `claimer_token_account` uses `init_if_needed` with `payer = creator`. If the claimer doesn't already have an ATA for the bounty's mint, creator pays the rent (~0.002 SOL) on top of the bounty reward. Acceptable; worth knowing.
+`instructions/approve_bounty_spl.rs` — `claimer_token_account` uses `init_if_needed` with `payer = creator`. If the claimer doesn't already have an ATA for the bounty's mint, creator pays the rent (~0.002 SOL) on top of the bounty reward. Acceptable; worth knowing.
 
 ## Things considered and not flagged
 
@@ -206,8 +164,6 @@ The following were checked and found acceptable:
 - **`init_if_needed` safety on `AgentReputation`** — counters are monotonic and saturating; PDA seeds are wallet-scoped and cannot collide; `init_if_needed`'s reinit-attack class does not apply.
 - **Pause coverage** — gating on `create_bounty`, `create_bounty_spl`, and `claim_bounty` blocks new economic commitment; resolution paths (submit, approve, cancel, expire, resolve) are deliberately not gated, ensuring funds cannot be trapped by pause.
 - **Cross-type rejection** — every SOL handler rejects SPL bounties and vice versa via `WrongEscrowType`. No way to invoke SOL-shaped logic on an SPL escrow.
-- **Tier check arithmetic** — the `min_tier_required - 1` subtraction is gated by an `if min_tier_required > 0` outer check, so u8 underflow is unreachable.
-- **Attestation expiry** — checked against `Clock::get()?.unix_timestamp` before signature verification, preventing replay of old attestations.
 - **Signer seeds for SPL CPIs** — `approve_bounty_spl` and `cancel_bounty_spl` derive the escrow PDA's signer seeds from the stored bump and use `CpiContext::new_with_signer`. Verified seeds match the PDA derivation.
 - **Whitelist enforcement** — `create_bounty_spl` requires the `TokenWhitelist` PDA derived from the mint as an account argument. Anchor's deserialization fails for any mint without an existing whitelist PDA.
 - **Pause authorization asymmetry** — `pause` is callable by admin OR guardian; `unpause` is admin-only. Correct for an emergency-stop pattern.
@@ -217,6 +173,6 @@ The following were checked and found acceptable:
 
 This single-session walkthrough surfaced findings that are predominantly design tradeoffs and operational considerations rather than critical bugs in the core escrow or FSM logic. The program follows standard Anchor patterns; account validation, signer requirements, and arithmetic safety are correctly applied across the instruction surface.
 
-The most important finding is **H-01** — `initialize_config` front-running — which is a deploy-time process concern rather than a code defect. The remaining medium-severity items concentrate around admin key management (M-01), the indexer trust model (M-02, M-03), and operational visibility (M-05). Most are resolvable with small targeted additions in a follow-up release.
+The most important finding is **H-01** — `initialize_config` front-running — which is a deploy-time process concern rather than a code defect. The remaining medium-severity items concentrate around admin key management (M-01) and operational visibility (M-02). Most are resolvable with small targeted additions in a follow-up release.
 
-This review should not be cited as evidence of security. **An external audit by a Solana-specialist firm is recommended before the program holds non-trivial value.** Quotes for a program of this surface area typically run $20-60K.
+This review should not be cited as evidence of security.

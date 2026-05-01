@@ -74,7 +74,6 @@ describe("redoubt: bounty expiry", () => {
         reward,
         new BN(deadlineSec),
         PublicKey.default,
-        0,
       )
       .accounts({
         bounty,
@@ -171,14 +170,12 @@ describe("redoubt: bounty expiry", () => {
     const { bounty, escrow } = await createBounty(id, reward, deadline);
 
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
@@ -233,14 +230,12 @@ describe("redoubt: bounty expiry", () => {
 
     // Drive bounty to Submitted (not Open or Claimed).
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
@@ -284,14 +279,12 @@ describe("redoubt: bounty expiry", () => {
     const { bounty, escrow } = await createBounty(id, reward, deadline);
 
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
@@ -341,14 +334,12 @@ describe("redoubt: bounty expiry", () => {
 
     // Drive bounty to Claimed (so claimer matches) but stop short of Submitted.
     await program.methods
-      .claimBounty(new BN(0))
+      .claimBounty()
       .accounts({
         bounty,
         claimerAgent: claimerAgentPda,
         claimer: claimer.publicKey,
         config: configPda,
-        position: null,
-        instructionsSysvar: null,
       })
       .signers([claimer])
       .rpc();
